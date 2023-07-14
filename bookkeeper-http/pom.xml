@@ -31,4 +31,7 @@
     <module>vertx-http-server</module>
     <module>servlet-http-server</module>
   </modules>
+  <properties>
+    <sonar.coverage.jacoco.xmlReportPaths>${basedir}/../${aggregate.report.dir}</sonar.coverage.jacoco.xmlReportPaths>
+  </properties>
 </project>
