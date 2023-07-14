@@ -31,7 +31,6 @@
         <include>**/LICENSE</include>
         <include>**/NOTICE</include>
         <include>**/pom.xml</include>
-        <include>**/*gradle*</include>
         <include>**/src/**</include>
         <include>**/conf/**</include>
         <include>**/bin/**</include>
@@ -59,7 +58,9 @@
         <!-- dev -->
         <exclude>dev/**</exclude>
         <!-- site -->
-        <exclude>site3/**</exclude>
+        <exclude>site/**</exclude>
+        <!-- jenkins -->
+        <exclude>jenkins/**</exclude>
       </excludes>
     </fileSet>
     <fileSet>

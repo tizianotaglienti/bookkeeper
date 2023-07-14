@@ -17,35 +17,23 @@
 # under the License.
 #
 
-FROM ubuntu:22.10
+FROM centos:7
 MAINTAINER Apache BookKeeper <dev@bookkeeper.apache.org>
 
-ARG TARGETARCH
-
-ARG BK_VERSION=4.15.1
+ARG BK_VERSION=4.12.1
 ARG DISTRO_NAME=bookkeeper-server-${BK_VERSION}-bin
 ARG DISTRO_URL=https://archive.apache.org/dist/bookkeeper/bookkeeper-${BK_VERSION}/${DISTRO_NAME}.tar.gz
 
 ENV BOOKIE_PORT=3181
-ENV BOOKIE_HTTP_PORT=8080
-EXPOSE $BOOKIE_PORT $BOOKIE_HTTP_PORT
+EXPOSE $BOOKIE_PORT
 ENV BK_USER=bookkeeper
 ENV BK_HOME=/opt/bookkeeper
-ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-$TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-11
 
 # Download Apache Bookkeeper, untar and clean up
 RUN set -x \
     && adduser "${BK_USER}" \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends openjdk-17-jdk \
-    && apt-get install -y --no-install-recommends python3 pip \
-    && ln -s /usr/bin/python3 /usr/bin/python \
-    && apt-get install -y --no-install-recommends gpg gpg-agent wget sudo \
-    && apt-get -y --purge autoremove \
-    && apt-get autoclean \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
+    && yum install -y java-11-openjdk-devel wget bash python3 sudo\
     && mkdir -pv /opt \
     && cd /opt \
     && wget -q "${DISTRO_URL}" \
@@ -58,7 +46,15 @@ RUN set -x \
     && tar -xzf "$DISTRO_NAME.tar.gz" \
     && mv bookkeeper-server-${BK_VERSION}/ /opt/bookkeeper/ \
     && rm -rf "$DISTRO_NAME.tar.gz" "$DISTRO_NAME.tar.gz.asc" "$DISTRO_NAME.tar.gz.sha512" \
-    && pip install zk-shell
+    # install zookeeper shell
+    && wget -q https://bootstrap.pypa.io/pip/2.7/get-pip.py \
+    && python --version \
+    && python get-pip.py \
+    && pip install zk-shell \
+    && rm -rf get-pip.py \
+    && yum remove -y wget \
+    && yum clean all \
+    && ls /usr/lib/jvm
 
 WORKDIR /opt/bookkeeper
 

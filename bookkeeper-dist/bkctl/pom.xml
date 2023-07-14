@@ -23,7 +23,7 @@
   <parent>
     <artifactId>bookkeeper-dist</artifactId>
     <groupId>org.apache.bookkeeper</groupId>
-    <version>4.17.0-SNAPSHOT</version>
+    <version>4.14.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -43,6 +43,12 @@
           <artifactId>rocksdbjni</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+
+    <!-- slf4j binding -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
     </dependency>
   </dependencies>
 

@@ -28,6 +28,7 @@ services:
     links:
       - zookeeper
     environment:
+      - JAVA_HOME=/usr/lib/jvm/java-11
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
 
@@ -37,6 +38,7 @@ services:
     links:
       - zookeeper
     environment:
+      - JAVA_HOME=/usr/lib/jvm/java-11
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
 
@@ -46,6 +48,7 @@ services:
     links:
       - zookeeper
     environment:
+      - JAVA_HOME=/usr/lib/jvm/java-11
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
 

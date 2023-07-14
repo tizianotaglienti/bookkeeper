@@ -24,7 +24,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
-import java.util.concurrent.ThreadLocalRandom;
+
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.bookkeeper.proto.BookieProtoEncoding.EnDecoder;
 import org.apache.bookkeeper.proto.BookieProtoEncoding.RequestEnDeCoderPreV3;
@@ -48,12 +49,12 @@ import org.slf4j.MDC;
 /**
  * Benchmarking serialization and deserialization.
  */
-@BenchmarkMode({Mode.Throughput})
+@BenchmarkMode({ Mode.Throughput })
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Thread)
 public class ProtocolBenchmark {
 
-    @Param({"10", "100", "1000", "10000"})
+    @Param({ "10", "100", "1000", "10000" })
     int size;
 
     byte[] masterKey;
@@ -67,16 +68,33 @@ public class ProtocolBenchmark {
     @Setup
     public void prepare() {
         this.masterKey = "test-benchmark-key".getBytes(UTF_8);
+        Random r = new Random(System.currentTimeMillis());
         byte[] data = new byte[this.size];
-        ThreadLocalRandom.current().nextBytes(data);
+        r.nextBytes(data);
         this.entry = Unpooled.wrappedBuffer(data);
-        this.ledgerId = ThreadLocalRandom.current().nextLong();
-        this.entryId = ThreadLocalRandom.current().nextLong();
+        this.ledgerId = r.nextLong();
+        this.entryId = r.nextLong();
         this.flags = 1;
 
         // prepare the encoder
         this.reqEnDeV2 = new RequestEnDeCoderPreV3(null);
         this.reqEnDeV3 = new RequestEnDecoderV3(null);
+    }
+
+
+    @Benchmark
+    public void testAddEntryV2() throws Exception {
+        ByteBufList list = ByteBufList.get(entry.retainedSlice());
+        BookieProtocol.AddRequest req = BookieProtocol.AddRequest.create(
+                BookieProtocol.CURRENT_PROTOCOL_VERSION,
+                ledgerId,
+                entryId,
+                flags,
+                masterKey,
+                list);
+        Object res = this.reqEnDeV2.encode(req, ByteBufAllocator.DEFAULT);
+        ReferenceCountUtil.release(res);
+        ReferenceCountUtil.release(list);
     }
 
     @Benchmark

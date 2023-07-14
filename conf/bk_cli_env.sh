@@ -50,8 +50,7 @@
 # CLI_LOG_FILE="bookkeeper-cli.log"
 
 # Log level & appender
-# CLI_ROOT_LOG_LEVEL="INFO"
-# CLI_ROOT_LOG_APPENDER="CONSOLE"
+# CLI_ROOT_LOGGER="INFO,CONSOLE"
 
 #################################
 # JVM memory options

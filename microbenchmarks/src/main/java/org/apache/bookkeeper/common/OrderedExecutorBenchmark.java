@@ -19,11 +19,13 @@
 package org.apache.bookkeeper.common;
 
 import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
 import org.apache.bookkeeper.common.util.OrderedExecutor;
 import org.apache.bookkeeper.common.util.OrderedScheduler;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -49,17 +51,14 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 3, time = 10, timeUnit = TimeUnit.SECONDS)
 public class OrderedExecutorBenchmark {
 
-    private static Map<String, Supplier<ExecutorService>> providers = ImmutableMap.of(
+    private static Map<String, Supplier<ExecutorService>> providers = ImmutableMap.of( //
             "JDK-ThreadPool", () -> Executors.newFixedThreadPool(1),
-            "OrderedExecutor", () -> OrderedExecutor.newBuilder().numThreads(1).build(),
+            "OrderedExecutor", () -> OrderedExecutor.newBuilder().numThreads(1).build(), //
             "OrderedScheduler", () -> OrderedScheduler.newSchedulerBuilder().numThreads(1).build());
 
-    /**
-     * State holder of the test.
-    */
     @State(Scope.Benchmark)
     public static class TestState {
-        @Param({"JDK-ThreadPool", "OrderedExecutor", "OrderedScheduler"})
+        @Param({ "JDK-ThreadPool", "OrderedExecutor", "OrderedScheduler" })
         private String executorName;
 
         private ExecutorService executor;

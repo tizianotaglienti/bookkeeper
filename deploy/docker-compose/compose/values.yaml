@@ -16,9 +16,8 @@
 # * limitations under the License.
 # */
 
-# data directories, set .e.g `./data` if you want to have
-# Zookeeper (data and datalog) and BookKeeper (journal and ledgers) volumes mounted to your host
-dataDir:
+# data directories
+dataDir: ./data
 
 # advertised address that bookies used for advertising themselves.
 # host network mode is useless on Mac, so in order to let clients
@@ -32,7 +31,7 @@ networkMode: bridge
 
 zookeeper:
   size: 3
-  image: zookeeper:3.8.0
+  image: apachebookkeeper/bookkeeper-current:latest
   adminPort: 8080
   clientPort: 2181
   peerPort: 2888
@@ -40,7 +39,7 @@ zookeeper:
 
 bookkeeper:
   size: 3
-  image: apache/bookkeeper:4.15.3
+  image: apachebookkeeper/bookkeeper-current:latest
   bookiePort: 3181
   bookieGrpcPort: 4181
   bookieHttpPort: 8080
