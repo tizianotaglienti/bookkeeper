@@ -32,6 +32,7 @@ import org.apache.bookkeeper.http.service.HttpServiceResponse;
 import org.apache.bookkeeper.meta.LedgerManager;
 import org.apache.bookkeeper.meta.LedgerManagerFactory;
 import org.apache.bookkeeper.meta.LedgerMetadataSerDe;
+import org.apache.bookkeeper.proto.BookieServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +45,13 @@ public class GetLedgerMetaService implements HttpEndpointService {
     static final Logger LOG = LoggerFactory.getLogger(GetLedgerMetaService.class);
 
     protected ServerConfiguration conf;
-    private final LedgerManagerFactory ledgerManagerFactory;
+    protected BookieServer bookieServer;
     private final LedgerMetadataSerDe serDe;
 
-    public GetLedgerMetaService(ServerConfiguration conf, LedgerManagerFactory ledgerManagerFactory) {
+    public GetLedgerMetaService(ServerConfiguration conf, BookieServer bookieServer) {
         checkNotNull(conf);
         this.conf = conf;
-        this.ledgerManagerFactory = ledgerManagerFactory;
+        this.bookieServer = bookieServer;
         this.serDe = new LedgerMetadataSerDe();
     }
 
@@ -62,7 +63,8 @@ public class GetLedgerMetaService implements HttpEndpointService {
         if (HttpServer.Method.GET == request.getMethod() && (params != null) && params.containsKey("ledger_id")) {
             Long ledgerId = Long.parseLong(params.get("ledger_id"));
 
-            LedgerManager manager = ledgerManagerFactory.newLedgerManager();
+            LedgerManagerFactory mFactory = bookieServer.getBookie().getLedgerManagerFactory();
+            LedgerManager manager = mFactory.newLedgerManager();
 
             // output <ledgerId: ledgerMetadata>
             Map<String, Object> output = Maps.newHashMap();
@@ -72,9 +74,7 @@ public class GetLedgerMetaService implements HttpEndpointService {
             manager.close();
 
             String jsonResponse = JsonUtil.toJson(output);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("output body:" + jsonResponse);
-            }
+            LOG.debug("output body:" + jsonResponse);
             response.setBody(jsonResponse);
             response.setCode(HttpServer.StatusCode.OK);
             return response;

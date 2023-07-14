@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,6 +22,7 @@ package org.apache.bookkeeper.proto;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ExtensionRegistry;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -49,11 +50,10 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -67,12 +67,14 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.net.ssl.SSLPeerUnverifiedException;
+
 import org.apache.bookkeeper.auth.AuthProviderFactoryFactory;
 import org.apache.bookkeeper.auth.BookKeeperPrincipal;
 import org.apache.bookkeeper.auth.BookieAuthProvider;
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieException;
-import org.apache.bookkeeper.bookie.BookieImpl;
 import org.apache.bookkeeper.common.collections.BlockingMpscQueue;
 import org.apache.bookkeeper.common.util.affinity.CpuAffinity;
 import org.apache.bookkeeper.conf.ServerConfiguration;
@@ -95,7 +97,6 @@ class BookieNettyServer {
     final int maxFrameSize;
     final ServerConfiguration conf;
     final EventLoopGroup eventLoopGroup;
-    final EventLoopGroup acceptorGroup;
     final EventLoopGroup jvmEventLoopGroup;
     RequestProcessor requestProcessor;
     final AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -121,14 +122,10 @@ class BookieNettyServer {
         this.authProviderFactory = AuthProviderFactoryFactory.newBookieAuthProviderFactory(conf);
 
         if (!conf.isDisableServerSocketBind()) {
-            this.eventLoopGroup = EventLoopUtil.getServerEventLoopGroup(conf,
-                    new DefaultThreadFactory("bookie-io"));
-            this.acceptorGroup = EventLoopUtil.getServerAcceptorGroup(conf,
-                    new DefaultThreadFactory("bookie-acceptor"));
+            this.eventLoopGroup = EventLoopUtil.getServerEventLoopGroup(conf, new DefaultThreadFactory("bookie-io"));
             allChannels = new CleanupChannelGroup(eventLoopGroup);
         } else {
             this.eventLoopGroup = null;
-            this.acceptorGroup = null;
         }
 
         if (conf.isEnableLocalTransport()) {
@@ -155,8 +152,8 @@ class BookieNettyServer {
                         try {
                             CpuAffinity.acquireCore();
                         } catch (Throwable t) {
-                            LOG.warn("Failed to acquire CPU core for thread {} {}",
-                                    Thread.currentThread().getName(), t.getMessage(), t);
+                            LOG.warn("Failed to acquire CPU core for thread {}", Thread.currentThread().getName(),
+                                    t.getMessage(), t);
                         }
                     });
                 }
@@ -166,8 +163,8 @@ class BookieNettyServer {
         } else {
             jvmEventLoopGroup = null;
         }
-        bookieId = BookieImpl.getBookieId(conf);
-        bookieAddress = BookieImpl.getBookieAddress(conf);
+        bookieId = Bookie.getBookieId(conf);
+        bookieAddress = Bookie.getBookieAddress(conf);
         if (conf.getListeningInterface() == null) {
             bindAddress = new InetSocketAddress(conf.getBookiePort());
         } else {
@@ -308,7 +305,7 @@ class BookieNettyServer {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.option(ChannelOption.ALLOCATOR, allocator);
             bootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
-            bootstrap.group(acceptorGroup, eventLoopGroup);
+            bootstrap.group(eventLoopGroup, eventLoopGroup);
             bootstrap.childOption(ChannelOption.TCP_NODELAY, conf.getServerTcpNoDelay());
             bootstrap.childOption(ChannelOption.SO_LINGER, conf.getServerSockLinger());
             bootstrap.childOption(ChannelOption.RCVBUF_ALLOCATOR,
@@ -317,9 +314,7 @@ class BookieNettyServer {
             bootstrap.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(
                     conf.getServerWriteBufferLowWaterMark(), conf.getServerWriteBufferHighWaterMark()));
 
-            if (eventLoopGroup instanceof IOUringEventLoopGroup){
-                bootstrap.channel(IOUringServerSocketChannel.class);
-            } else if (eventLoopGroup instanceof EpollEventLoopGroup) {
+            if (eventLoopGroup instanceof EpollEventLoopGroup) {
                 bootstrap.channel(EpollServerSocketChannel.class);
             } else {
                 bootstrap.channel(NioServerSocketChannel.class);
@@ -338,11 +333,11 @@ class BookieNettyServer {
                         new BookieSideConnectionPeerContextHandler();
                     ChannelPipeline pipeline = ch.pipeline();
 
-                    pipeline.addLast("consolidation", new FlushConsolidationHandler(1024, true));
-
-                    pipeline.addLast("bytebufList", ByteBufList.ENCODER);
+                    // For ByteBufList, skip the usual LengthFieldPrepender and have the encoder itself to add it
+                    pipeline.addLast("bytebufList", ByteBufList.ENCODER_WITH_SIZE);
 
                     pipeline.addLast("lengthbaseddecoder", new LengthFieldBasedFrameDecoder(maxFrameSize, 0, 4, 0, 4));
+                    pipeline.addLast("lengthprepender", new LengthFieldPrepender(4));
 
                     pipeline.addLast("bookieProtoDecoder", new BookieProtoEncoding.RequestDecoder(registry));
                     pipeline.addLast("bookieProtoEncoder", new BookieProtoEncoding.ResponseEncoder(registry));
@@ -361,15 +356,11 @@ class BookieNettyServer {
             // Bind and start to accept incoming connections
             LOG.info("Binding bookie-rpc endpoint to {}", address);
             Channel listen = bootstrap.bind(address.getAddress(), address.getPort()).sync().channel();
-
             if (listen.localAddress() instanceof InetSocketAddress) {
                 if (conf.getBookiePort() == 0) {
-                    // this is really really nasty. It's using the configuration object as a notification
-                    // bus. We should get rid of this at some point
                     conf.setBookiePort(((InetSocketAddress) listen.localAddress()).getPort());
                 }
             }
-
         }
 
         if (conf.isEnableLocalTransport()) {
@@ -387,8 +378,6 @@ class BookieNettyServer {
 
             if (jvmEventLoopGroup instanceof DefaultEventLoopGroup) {
                 jvmBootstrap.channel(LocalServerChannel.class);
-            } else if (jvmEventLoopGroup instanceof IOUringEventLoopGroup) {
-                jvmBootstrap.channel(IOUringServerSocketChannel.class);
             } else if (jvmEventLoopGroup instanceof EpollEventLoopGroup) {
                 jvmBootstrap.channel(EpollServerSocketChannel.class);
             } else {
@@ -409,6 +398,7 @@ class BookieNettyServer {
                     ChannelPipeline pipeline = ch.pipeline();
 
                     pipeline.addLast("lengthbaseddecoder", new LengthFieldBasedFrameDecoder(maxFrameSize, 0, 4, 0, 4));
+                    pipeline.addLast("lengthprepender", new LengthFieldPrepender(4));
 
                     pipeline.addLast("bookieProtoDecoder", new BookieProtoEncoding.RequestDecoder(registry));
                     pipeline.addLast("bookieProtoEncoder", new BookieProtoEncoding.ResponseEncoder(registry));
@@ -444,14 +434,6 @@ class BookieNettyServer {
         }
 
         allChannels.close().awaitUninterruptibly();
-
-        if (acceptorGroup != null) {
-            try {
-                acceptorGroup.shutdownGracefully(0, 10, TimeUnit.MILLISECONDS).await();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
 
         if (eventLoopGroup != null) {
             try {

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.bookkeeper.client;
 
 import java.util.BitSet;
 import java.util.Map;
+
 import org.apache.bookkeeper.net.BookieId;
 
 /**
@@ -136,22 +137,10 @@ public interface DistributionSchedule {
             }
         };
 
-    int getWriteQuorumSize();
-
     /**
      * Return the set of bookie indices to send the message to.
      */
     WriteSet getWriteSet(long entryId);
-
-    /**
-     * Return the WriteSet bookie index for a given and index
-     * in the WriteSet.
-     *
-     * @param entryId
-     * @param writeSetIndex
-     * @return
-     */
-    int getWriteSetBookieIndex(long entryId, int writeSetIndex);
 
     /**
      * Return the set of bookies indices to send the messages to the whole ensemble.

@@ -20,6 +20,7 @@ package org.apache.bookkeeper.metadata.etcd.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
+
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KeyValue;
@@ -27,6 +28,7 @@ import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchResponse;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;

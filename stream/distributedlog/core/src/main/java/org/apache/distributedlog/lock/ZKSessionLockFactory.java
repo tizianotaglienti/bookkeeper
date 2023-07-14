@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.common.util.OrderedScheduler;
+import org.apache.bookkeeper.common.util.SafeRunnable;
 import org.apache.bookkeeper.stats.StatsLogger;
 import org.apache.distributedlog.ZooKeeperClient;
 import org.apache.distributedlog.exceptions.DLInterruptedException;
@@ -88,37 +89,40 @@ public class ZKSessionLockFactory implements SessionLockFactory {
                     final AtomicInteger numRetries,
                     final CompletableFuture<SessionLock> createPromise,
                     final long delayMs) {
-        lockStateExecutor.scheduleOrdered(lockPath, () -> {
-            if (null != interruptedException.get()) {
-                createPromise.completeExceptionally(interruptedException.get());
-                return;
-            }
-            try {
-                SessionLock lock = new ZKSessionLock(
-                        zkc,
-                        lockPath,
-                        clientId,
-                        lockStateExecutor,
-                        lockOpTimeout,
-                        lockStatsLogger,
-                        context);
-                createPromise.complete(lock);
-            } catch (DLInterruptedException dlie) {
-                // if the creation is interrupted, throw the exception without retrie.
-                createPromise.completeExceptionally(dlie);
-                return;
-            } catch (IOException e) {
-                if (numRetries.getAndDecrement() < 0) {
-                    createPromise.completeExceptionally(e);
+        lockStateExecutor.scheduleOrdered(lockPath, new SafeRunnable() {
+            @Override
+            public void safeRun() {
+                if (null != interruptedException.get()) {
+                    createPromise.completeExceptionally(interruptedException.get());
                     return;
                 }
-                createLock(
-                        lockPath,
-                        context,
-                        interruptedException,
-                        numRetries,
-                        createPromise,
-                        zkRetryBackoffMs);
+                try {
+                    SessionLock lock = new ZKSessionLock(
+                            zkc,
+                            lockPath,
+                            clientId,
+                            lockStateExecutor,
+                            lockOpTimeout,
+                            lockStatsLogger,
+                            context);
+                    createPromise.complete(lock);
+                } catch (DLInterruptedException dlie) {
+                    // if the creation is interrupted, throw the exception without retrie.
+                    createPromise.completeExceptionally(dlie);
+                    return;
+                } catch (IOException e) {
+                    if (numRetries.getAndDecrement() < 0) {
+                        createPromise.completeExceptionally(e);
+                        return;
+                    }
+                    createLock(
+                            lockPath,
+                            context,
+                            interruptedException,
+                            numRetries,
+                            createPromise,
+                            zkRetryBackoffMs);
+                }
             }
         }, delayMs, TimeUnit.MILLISECONDS);
     }

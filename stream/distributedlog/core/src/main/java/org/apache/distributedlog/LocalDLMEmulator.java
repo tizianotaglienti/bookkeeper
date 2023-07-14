@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,7 +67,6 @@ public class LocalDLMEmulator {
     private final String zkHost;
     private final int zkPort;
     private final int numBookies;
-    private final LocalBookKeeper lb;
 
     /**
      * Builder to build LocalDLMEmulator.
@@ -77,6 +76,7 @@ public class LocalDLMEmulator {
         private int numBookies = DEFAULT_NUM_BOOKIES;
         private String zkHost = DEFAULT_ZK_HOST;
         private int zkPort = DEFAULT_ZK_PORT;
+        private int initialBookiePort = DEFAULT_BOOKIE_INITIAL_PORT;
         private boolean shouldStartZK = true;
         private Optional<ServerConfiguration> serverConf = Optional.empty();
 
@@ -94,6 +94,10 @@ public class LocalDLMEmulator {
         }
         public Builder zkTimeoutSec(int zkTimeoutSec) {
             this.zkTimeoutSec = zkTimeoutSec;
+            return this;
+        }
+        public Builder initialBookiePort(int initialBookiePort) {
+            this.initialBookiePort = initialBookiePort;
             return this;
         }
         public Builder shouldStartZK(boolean shouldStartZK) {
@@ -118,7 +122,7 @@ public class LocalDLMEmulator {
             newConf.setAllowLoopback(true);
 
             return new LocalDLMEmulator(numBookies, shouldStartZK, zkHost, zkPort,
-                zkTimeoutSec, newConf);
+                initialBookiePort, zkTimeoutSec, newConf);
         }
     }
 
@@ -127,7 +131,7 @@ public class LocalDLMEmulator {
     }
 
     private LocalDLMEmulator(final int numBookies, final boolean shouldStartZK,
-                             final String zkHost, final int zkPort,
+                             final String zkHost, final int zkPort, final int initialBookiePort,
                              final int zkTimeoutSec, final ServerConfiguration serverConf) throws Exception {
         this.numBookies = numBookies;
         this.zkHost = zkHost;
@@ -135,21 +139,13 @@ public class LocalDLMEmulator {
         this.zkEnsemble = zkHost + ":" + zkPort;
         this.uri = URI.create("distributedlog://" + zkEnsemble + DLOG_NAMESPACE);
         this.zkTimeoutSec = zkTimeoutSec;
-        this.lb = LocalBookKeeper.getLocalBookies(zkHost, zkPort,
-                numBookies, shouldStartZK, serverConf);
         this.bkStartupThread = new Thread() {
             public void run() {
                 try {
-                    try {
-                        LOG.info("Starting {} bookies : allowLoopback = {}", numBookies, serverConf.getAllowLoopback());
-                        lb.start();
-                        LOG.info("{} bookies are started.", numBookies);
-                        while (true) {
-                            Thread.sleep(1000);
-                        }
-                    } finally {
-                        lb.close();
-                    }
+                    LOG.info("Starting {} bookies : allowLoopback = {}", numBookies, serverConf.getAllowLoopback());
+                    LocalBookKeeper.startLocalBookies(zkHost, zkPort,
+                            numBookies, shouldStartZK, initialBookiePort, serverConf);
+                    LOG.info("{} bookies are started.", numBookies);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     // go away quietly
@@ -231,14 +227,6 @@ public class LocalDLMEmulator {
         } finally {
             zkc.close();
         }
-    }
-
-    public void addBookie() throws Exception {
-        lb.addBookie();
-    }
-
-    public void removeBookie() throws Exception {
-        lb.removeBookie();
     }
 
     public static String getBkLedgerPath() {

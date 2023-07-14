@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,6 +24,7 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.UnsignedBytes;
+
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Comparator;
@@ -91,7 +92,7 @@ public class Value {
 
     @Override
     public int hashCode() {
-        HashFunction hf = Hashing.murmur3_32_fixed();
+        HashFunction hf = Hashing.murmur3_32();
         Hasher hc = hf.newHasher();
         for (String key : fields.keySet()) {
             hc.putString(key, Charset.defaultCharset());

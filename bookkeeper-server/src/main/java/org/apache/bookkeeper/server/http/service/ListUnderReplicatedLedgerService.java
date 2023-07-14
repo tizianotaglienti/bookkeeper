@@ -35,6 +35,7 @@ import org.apache.bookkeeper.http.service.HttpServiceResponse;
 import org.apache.bookkeeper.meta.LedgerManagerFactory;
 import org.apache.bookkeeper.meta.LedgerUnderreplicationManager;
 import org.apache.bookkeeper.meta.UnderreplicatedLedger;
+import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,12 +51,12 @@ public class ListUnderReplicatedLedgerService implements HttpEndpointService {
     static final Logger LOG = LoggerFactory.getLogger(ListUnderReplicatedLedgerService.class);
 
     protected ServerConfiguration conf;
-    private final LedgerManagerFactory ledgerManagerFactory;
+    protected BookieServer bookieServer;
 
-    public ListUnderReplicatedLedgerService(ServerConfiguration conf, LedgerManagerFactory ledgerManagerFactory) {
+    public ListUnderReplicatedLedgerService(ServerConfiguration conf, BookieServer bookieServer) {
         checkNotNull(conf);
         this.conf = conf;
-        this.ledgerManagerFactory = ledgerManagerFactory;
+        this.bookieServer = bookieServer;
     }
 
     /*
@@ -99,8 +100,8 @@ public class ListUnderReplicatedLedgerService implements HttpEndpointService {
                 boolean hasURLedgers = false;
                 List<Long> outputLedgers = null;
                 Map<Long, List<String>> outputLedgersWithMissingReplica = null;
-                LedgerUnderreplicationManager underreplicationManager =
-                    ledgerManagerFactory.newLedgerUnderreplicationManager();
+                LedgerManagerFactory mFactory = bookieServer.getBookie().getLedgerManagerFactory();
+                LedgerUnderreplicationManager underreplicationManager = mFactory.newLedgerUnderreplicationManager();
                 Iterator<UnderreplicatedLedger> iter = underreplicationManager.listLedgersToRereplicate(predicate);
 
                 hasURLedgers = iter.hasNext();
@@ -128,9 +129,7 @@ public class ListUnderReplicatedLedgerService implements HttpEndpointService {
                     response.setCode(HttpServer.StatusCode.OK);
                     String jsonResponse = JsonUtil
                             .toJson(printMissingReplica ? outputLedgersWithMissingReplica : outputLedgers);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("output body: " + jsonResponse);
-                    }
+                    LOG.debug("output body: " + jsonResponse);
                     response.setBody(jsonResponse);
                     return response;
                 }

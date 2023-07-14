@@ -549,7 +549,6 @@ class FileInfo extends Watchable<LastAddConfirmedUpdateNotification> {
         }
         fc = new RandomAccessFile(newFile, mode).getChannel();
         lf = newFile;
-        deleted = false;
     }
 
     public synchronized byte[] getMasterKey() throws IOException {

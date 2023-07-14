@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,11 +25,13 @@ import static org.apache.bookkeeper.bookie.BookKeeperServerStats.WATCHER_SCOPE;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.concurrent.DefaultThreadFactory;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
@@ -39,11 +41,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.bookkeeper.bookie.BookKeeperServerStats;
 import org.apache.bookkeeper.client.AsyncCallback.CreateCallback;
 import org.apache.bookkeeper.client.AsyncCallback.DeleteCallback;
@@ -79,6 +81,7 @@ import org.apache.bookkeeper.meta.LedgerManagerFactory;
 import org.apache.bookkeeper.meta.MetadataClientDriver;
 import org.apache.bookkeeper.meta.MetadataDrivers;
 import org.apache.bookkeeper.meta.exceptions.MetadataException;
+import org.apache.bookkeeper.meta.zk.ZKMetadataClientDriver;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.net.DNSToSwitchMapping;
 import org.apache.bookkeeper.proto.BookieAddressResolver;
@@ -88,6 +91,7 @@ import org.apache.bookkeeper.proto.DataFormats;
 import org.apache.bookkeeper.stats.NullStatsLogger;
 import org.apache.bookkeeper.stats.StatsLogger;
 import org.apache.bookkeeper.util.EventLoopUtil;
+import org.apache.bookkeeper.util.SafeRunnable;
 import org.apache.bookkeeper.versioning.Versioned;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.zookeeper.KeeperException;
@@ -493,9 +497,8 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
             this.ownTimer = false;
         }
 
-        BookieAddressResolver bookieAddressResolver = conf.getBookieAddressResolverEnabled()
-                ? new DefaultBookieAddressResolver(metadataDriver.getRegistrationClient())
-                : new BookieAddressResolverDisabled();
+        BookieAddressResolver bookieAddressResolver =
+                new DefaultBookieAddressResolver(metadataDriver.getRegistrationClient());
         if (dnsResolver != null) {
             dnsResolver.setBookieAddressResolver(bookieAddressResolver);
         }
@@ -567,7 +570,7 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
         bookieQuarantineRatio = 1.0;
     }
 
-    protected EnsemblePlacementPolicy initializeEnsemblePlacementPolicy(ClientConfiguration conf,
+    private EnsemblePlacementPolicy initializeEnsemblePlacementPolicy(ClientConfiguration conf,
                                                                       DNSToSwitchMapping dnsResolver,
                                                                       HashedWheelTimer timer,
                                                                       FeatureProvider featureProvider,
@@ -601,35 +604,19 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
 
     void scheduleBookieHealthCheckIfEnabled(ClientConfiguration conf) {
         if (conf.isBookieHealthCheckEnabled()) {
-            scheduler.scheduleAtFixedRate(
-                    () -> checkForFaultyBookies(),
-                    conf.getBookieHealthCheckIntervalSeconds(),
-                    conf.getBookieHealthCheckIntervalSeconds(),
+            scheduler.scheduleAtFixedRate(new SafeRunnable() {
+
+                @Override
+                public void safeRun() {
+                    checkForFaultyBookies();
+                }
+                    }, conf.getBookieHealthCheckIntervalSeconds(), conf.getBookieHealthCheckIntervalSeconds(),
                     TimeUnit.SECONDS);
         }
     }
 
     void checkForFaultyBookies() {
         List<BookieId> faultyBookies = bookieClient.getFaultyBookies();
-        if (faultyBookies.isEmpty()) {
-            return;
-        }
-
-        boolean isEnabled = false;
-        try {
-            isEnabled = metadataDriver.isHealthCheckEnabled().get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOG.error("Cannot verify if healthcheck is enabled", e);
-        } catch (ExecutionException e) {
-            LOG.error("Cannot verify if healthcheck is enabled", e.getCause());
-        }
-        if (!isEnabled) {
-            LOG.info("Health checks is currently disabled!");
-            bookieWatcher.releaseAllQuarantinedBookies();
-            return;
-        }
-
         for (BookieId faultyBookie : faultyBookies) {
             if (Math.random() <= bookieQuarantineRatio) {
                 bookieWatcher.quarantineBookie(faultyBookie);
@@ -646,11 +633,6 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
     @VisibleForTesting
     public LedgerManager getLedgerManager() {
         return ledgerManager;
-    }
-
-    @VisibleForTesting
-    public LedgerManagerFactory getLedgerManagerFactory() {
-        return ledgerManagerFactory;
     }
 
     @VisibleForTesting
@@ -759,6 +741,10 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
                     throw new IllegalArgumentException("Unable to convert digest type " + this);
             }
         }
+    }
+
+    ZooKeeper getZkHandle() {
+        return ((ZKMetadataClientDriver) metadataDriver).getZk();
     }
 
     protected ClientConfiguration getConf() {
@@ -1660,7 +1646,7 @@ public class BookKeeper implements org.apache.bookkeeper.client.api.BookKeeper {
             }
         };
 
-    public ClientContext getClientCtx() {
+    ClientContext getClientCtx() {
         return clientCtx;
     }
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,9 @@
 package org.apache.bookkeeper.client;
 
 import io.netty.buffer.ByteBuf;
+
 import java.util.List;
+
 import org.apache.bookkeeper.client.BKException.BKDigestMatchException;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookieClient;
@@ -154,9 +156,7 @@ class PendingReadLacOp implements ReadLacCallback {
         }
 
         if (numResponsesPending == 0 && !completed) {
-            LOG.error(
-                    "While readLac ledger: {} did not hear success responses from all of ensemble, coverageSet is: {}",
-                    ledgerId, coverageSet);
+            LOG.info("While readLac ledger: " + ledgerId + " did not hear success responses from all of ensemble");
             cb.getLacComplete(lastSeenError, maxLac);
         }
     }

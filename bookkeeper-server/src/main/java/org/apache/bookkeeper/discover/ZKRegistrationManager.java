@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -110,16 +109,17 @@ public class ZKRegistrationManager implements RegistrationManager {
     protected final String bookieReadonlyRegistrationPath;
     // session timeout in milliseconds
     private final int zkTimeoutMs;
-    private final List<RegistrationListener> listeners = new ArrayList<>();
 
     public ZKRegistrationManager(ServerConfiguration conf,
-                                 ZooKeeper zk) {
-        this(conf, zk, ZKMetadataDriverBase.resolveZkLedgersRootPath(conf));
+                                 ZooKeeper zk,
+                                 RegistrationListener listener) {
+        this(conf, zk, ZKMetadataDriverBase.resolveZkLedgersRootPath(conf), listener);
     }
 
     public ZKRegistrationManager(ServerConfiguration conf,
                                  ZooKeeper zk,
-                                 String ledgersRootPath) {
+                                 String ledgersRootPath,
+                                 RegistrationListener listener) {
         this.conf = conf;
         this.zk = zk;
         this.zkAcls = ZkUtils.getACLs(conf);
@@ -142,7 +142,7 @@ public class ZKRegistrationManager implements RegistrationManager {
             // Check for expired connection.
             if (event.getType().equals(EventType.None)
                 && event.getState().equals(KeeperState.Expired)) {
-                listeners.forEach(RegistrationListener::onRegistrationExpired);
+                listener.onRegistrationExpired();
             }
         });
     }
@@ -609,10 +609,5 @@ public class ZKRegistrationManager implements RegistrationManager {
                     e);
             throw new MetadataStoreException(e);
         }
-    }
-
-    @Override
-    public void addRegistrationListener(RegistrationListener listener) {
-        listeners.add(listener);
     }
 }

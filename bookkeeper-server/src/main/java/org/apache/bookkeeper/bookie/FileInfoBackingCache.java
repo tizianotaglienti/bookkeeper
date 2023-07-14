@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,8 +33,7 @@ class FileInfoBackingCache {
     static final int DEAD_REF = -0xdead;
 
     final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    final ConcurrentLongHashMap<CachedFileInfo> fileInfos =
-            ConcurrentLongHashMap.<CachedFileInfo>newBuilder().build();
+    final ConcurrentLongHashMap<CachedFileInfo> fileInfos = new ConcurrentLongHashMap<>();
     final FileLoader fileLoader;
     final int fileInfoVersionToWrite;
 

@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,30 +23,36 @@ package org.apache.bookkeeper.proto;
 import static org.apache.bookkeeper.auth.AuthProviderFactoryFactory.AUTHENTICATION_DISABLED_PLUGIN_NAME;
 
 import com.google.protobuf.ByteString;
-import io.netty.buffer.ByteBuf;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.ssl.SslHandler;
+
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.net.ssl.SSLSession;
+
 import org.apache.bookkeeper.auth.AuthCallbacks;
 import org.apache.bookkeeper.auth.AuthToken;
 import org.apache.bookkeeper.auth.BookieAuthProvider;
 import org.apache.bookkeeper.auth.ClientAuthProvider;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.AuthMessage;
-import org.apache.bookkeeper.util.ByteBufList;
-import org.apache.bookkeeper.util.NettyChannelUtil;
+import org.apache.http.conn.ssl.DefaultHostnameVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class AuthHandler {
     static final Logger LOG = LoggerFactory.getLogger(AuthHandler.class);
+    private static final DefaultHostnameVerifier HOSTNAME_VERIFIER = new DefaultHostnameVerifier();
 
     static class ServerSideHandler extends ChannelInboundHandlerAdapter {
         volatile boolean authenticated = false;
@@ -103,15 +109,15 @@ class AuthHandler {
             } else if (msg instanceof BookieProtocol.Request) {
                 BookieProtocol.Request req = (BookieProtocol.Request) msg;
                 if (req.getOpCode() == BookieProtocol.ADDENTRY) {
-                    final BookieProtocol.AddResponse response = BookieProtocol.AddResponse.create(
-                            req.getProtocolVersion(), BookieProtocol.EUA,
-                            req.getLedgerId(), req.getEntryId());
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(ctx.channel(), response);
+                    ctx.channel().writeAndFlush(
+                            BookieProtocol.AddResponse.create(
+                                    req.getProtocolVersion(), BookieProtocol.EUA,
+                                    req.getLedgerId(), req.getEntryId()));
                 } else if (req.getOpCode() == BookieProtocol.READENTRY) {
-                    final BookieProtocol.ReadResponse response = new BookieProtocol.ReadResponse(
-                            req.getProtocolVersion(), BookieProtocol.EUA,
-                            req.getLedgerId(), req.getEntryId());
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(ctx.channel(), response);
+                    ctx.channel().writeAndFlush(
+                            new BookieProtocol.ReadResponse(
+                                    req.getProtocolVersion(), BookieProtocol.EUA,
+                                    req.getLedgerId(), req.getEntryId()));
                 } else {
                     ctx.channel().close();
                 }
@@ -134,7 +140,7 @@ class AuthHandler {
                         .setHeader(req.getHeader())
                         .setStatus(BookkeeperProtocol.StatusCode.EUA);
 
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(ctx.channel(), builder.build());
+                    ctx.channel().writeAndFlush(builder.build());
                 }
             } else {
                 // close the channel, junk coming over it
@@ -144,8 +150,8 @@ class AuthHandler {
 
         private boolean checkAuthPlugin(AuthMessage am, final Channel src) {
             if (!am.hasAuthPluginName() || !am.getAuthPluginName().equals(authProviderFactory.getPluginName())) {
-                LOG.error("Received message from incompatible auth plugin. Local = {}, Remote = {}, Channel = {}",
-                        authProviderFactory.getPluginName(), am.getAuthPluginName(), src);
+                LOG.error("Received message from incompatible auth plugin. Local = {}," + " Remote = {}, Channel = {}",
+                        authProviderFactory.getPluginName(), am.getAuthPluginName());
                 return false;
             }
             return true;
@@ -173,9 +179,7 @@ class AuthHandler {
                 }
                 AuthMessage message = AuthMessage.newBuilder().setAuthPluginName(req.authMessage.getAuthPluginName())
                         .setPayload(ByteString.copyFrom(newam.getData())).build();
-                final BookieProtocol.AuthResponse response =
-                        new BookieProtocol.AuthResponse(req.getProtocolVersion(), message);
-                NettyChannelUtil.writeAndFlushWithVoidPromise(channel, response);
+                channel.writeAndFlush(new BookieProtocol.AuthResponse(req.getProtocolVersion(), message));
             }
         }
 
@@ -199,17 +203,14 @@ class AuthHandler {
                     LOG.error("Error processing auth message, closing connection");
 
                     builder.setStatus(BookkeeperProtocol.StatusCode.EUA);
-                    NettyChannelUtil.writeAndFlushWithClosePromise(
-                            channel, builder.build()
-                    );
+                    channel.writeAndFlush(builder.build());
+                    channel.close();
                     return;
                 } else {
                     AuthMessage message = AuthMessage.newBuilder().setAuthPluginName(pluginName)
                             .setPayload(ByteString.copyFrom(newam.getData())).build();
                     builder.setStatus(BookkeeperProtocol.StatusCode.EOK).setAuthResponse(message);
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(
-                            channel, builder.build()
-                    );
+                    channel.writeAndFlush(builder.build());
                 }
             }
         }
@@ -366,10 +367,8 @@ class AuthHandler {
                     } else {
                         waitingForAuth.add(msg);
                     }
-                } else if (msg instanceof ByteBuf || msg instanceof ByteBufList) {
-                    waitingForAuth.add(msg);
                 } else {
-                    LOG.info("[{}] dropping write of message {}", ctx.channel(), msg);
+                    LOG.info("dropping write of message {}", msg);
                 }
             }
         }
@@ -405,9 +404,9 @@ class AuthHandler {
                         .setPayload(ByteString.copyFrom(newam.getData())).build();
 
                 if (isUsingV2Protocol) {
-                    final BookieProtocol.AuthRequest msg =
-                            new BookieProtocol.AuthRequest(BookieProtocol.CURRENT_PROTOCOL_VERSION, message);
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(channel, msg);
+                    channel.writeAndFlush(
+                            new BookieProtocol.AuthRequest(BookieProtocol.CURRENT_PROTOCOL_VERSION, message),
+                            channel.voidPromise());
                 } else {
                     // V3 protocol
                     BookkeeperProtocol.BKPacketHeader header = BookkeeperProtocol.BKPacketHeader.newBuilder()
@@ -416,7 +415,7 @@ class AuthHandler {
                     BookkeeperProtocol.Request.Builder builder = BookkeeperProtocol.Request.newBuilder()
                             .setHeader(header)
                             .setAuthRequest(message);
-                    NettyChannelUtil.writeAndFlushWithVoidPromise(channel, builder.build());
+                    channel.writeAndFlush(builder.build());
                 }
             }
         }
@@ -435,7 +434,7 @@ class AuthHandler {
                         authenticated = true;
                         Object msg = waitingForAuth.poll();
                         while (msg != null) {
-                            NettyChannelUtil.writeAndFlushWithVoidPromise(ctx, msg);
+                            ctx.writeAndFlush(msg);
                             msg = waitingForAuth.poll();
                         }
                     }
@@ -444,6 +443,35 @@ class AuthHandler {
                     authenticationError(ctx, rc);
                 }
             }
+        }
+
+        public boolean verifyTlsHostName(Channel channel) {
+            SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
+            if (sslHandler == null) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("can't perform hostname-verification on non-ssl channel {}", channel);
+                }
+                return true;
+            }
+            SSLSession sslSession = sslHandler.engine().getSession();
+            String hostname = null;
+            if (channel.remoteAddress() instanceof InetSocketAddress) {
+                hostname = ((InetSocketAddress) channel.remoteAddress()).getHostName();
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("can't get remote hostName on ssl session {}", channel);
+                }
+                return true;
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Verifying HostName for {}, Cipher {}, Protocols {}, on {}", hostname,
+                        sslSession.getCipherSuite(), sslSession.getProtocol(), channel);
+            }
+            boolean verification = HOSTNAME_VERIFIER.verify(hostname, sslSession);
+            if (!verification) {
+                LOG.warn("Failed to validate hostname verification {} on {}", hostname, channel);
+            }
+            return verification;
         }
     }
 

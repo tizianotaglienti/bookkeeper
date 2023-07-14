@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.distributedlog;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import org.apache.bookkeeper.stats.StatsLogger;
 import org.apache.distributedlog.io.CompressionCodec;
@@ -103,7 +102,7 @@ class EnvelopedEntry {
             CompressionCodec codec = CompressionUtils.getCompressionCodec(Type.of(codecCode));
             decompressedBuf = codec.decompress(compressedBuf, originDataLen);
         } finally {
-            ReferenceCountUtil.release(compressedBuf);
+            compressedBuf.release();
         }
         return decompressedBuf;
     }

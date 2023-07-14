@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +18,13 @@
 package org.apache.bookkeeper.meta;
 
 import com.google.common.collect.Lists;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.GenericCallback;
 import org.apache.bookkeeper.replication.ReplicationException;
@@ -41,11 +43,6 @@ public interface LedgerUnderreplicationManager extends AutoCloseable {
             markLedgerUnderreplicatedAsync(
                 ledgerId, Lists.newArrayList(missingReplica)), ReplicationException.EXCEPTION_HANDLER);
     }
-
-    /**
-     * Check whether the ledger is being replicated by any bookie.
-     */
-    boolean isLedgerBeingReplicated(long ledgerId) throws ReplicationException;
 
     /**
      * Mark a ledger as underreplicated with missing bookies. The replication should then
@@ -108,7 +105,6 @@ public interface LedgerUnderreplicationManager extends AutoCloseable {
     long pollLedgerToRereplicate()
             throws ReplicationException.UnavailableException;
 
-    void acquireUnderreplicatedLedger(long ledgerId) throws ReplicationException;
 
     /**
      * Release a previously acquired ledger. This allows others to acquire the ledger.
@@ -233,15 +229,6 @@ public interface LedgerUnderreplicationManager extends AutoCloseable {
      * @throws ReplicationException.UnavailableException
      */
     long getReplicasCheckCTime() throws ReplicationException.UnavailableException;
-
-    /**
-     * Receive notification asynchronously when the num of under-replicated ledgers  Changed.
-     *
-     * @param cb
-     * @throws ReplicationException.UnavailableException
-     */
-    void notifyUnderReplicationLedgerChanged(GenericCallback<Void> cb)
-            throws ReplicationException.UnavailableException;
 
     /**
      * Receive notification asynchronously when the lostBookieRecoveryDelay value is Changed.

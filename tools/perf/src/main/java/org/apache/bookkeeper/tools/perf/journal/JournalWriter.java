@@ -26,7 +26,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -43,8 +42,8 @@ import java.util.concurrent.atomic.LongAdder;
 import lombok.extern.slf4j.Slf4j;
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.Recorder;
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieException;
-import org.apache.bookkeeper.bookie.BookieImpl;
 import org.apache.bookkeeper.bookie.CheckpointSource.Checkpoint;
 import org.apache.bookkeeper.bookie.Journal;
 import org.apache.bookkeeper.bookie.LedgerDirsManager;
@@ -91,7 +90,7 @@ public class JournalWriter implements Runnable {
                 "-r", "--rate"
             },
             description = "Write rate bytes/s across journals")
-        public long writeRate = 0;
+        public int writeRate = 0;
 
         @Parameter(
             names = {
@@ -390,7 +389,7 @@ public class JournalWriter implements Runnable {
                     buf,
                     false,
                     (rc, ledgerId, entryId, addr, ctx) -> {
-                        ReferenceCountUtil.release(buf);
+                        buf.release();
                         if (0 == rc) {
                             if (null != semaphore) {
                                 semaphore.release(len);
@@ -405,7 +404,7 @@ public class JournalWriter implements Runnable {
                             recorder.recordValue(latencyMicros);
                             cumulativeRecorder.recordValue(latencyMicros);
                         } else {
-                            log.warn("Error at writing records : ", BookieException.create(rc));
+                            log.warn("Error at writing records : {}", BookieException.create(rc));
                             Runtime.getRuntime().exit(-1);
                         }
                     },
@@ -478,7 +477,7 @@ public class JournalWriter implements Runnable {
         conf.setJournalSyncData(flags.journalSyncEnabled);
         conf.setLedgerDirNames(flags.journalDirs.toArray(new String[0]));
         conf.setStatsProviderClass(PrometheusMetricsProvider.class);
-        File[] currentDirs = BookieImpl.getCurrentDirectories(conf.getLedgerDirs());
+        File[] currentDirs = Bookie.getCurrentDirectories(conf.getLedgerDirs());
         for (File dir : currentDirs) {
             if (dir.mkdirs()) {
                 log.info("Successfully created dir {}", dir);

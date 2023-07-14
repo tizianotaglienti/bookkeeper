@@ -69,19 +69,7 @@ public final class FutureUtils {
     public static <T, ExceptionT extends Throwable> T result(
         CompletableFuture<T> future, Function<Throwable, ExceptionT> exceptionHandler) throws ExceptionT {
         try {
-            try {
-                /*
-                 * CompletableFuture.get() in JDK8 spins before blocking and wastes CPU time.
-                 * CompletableFuture.get(long, TimeUnit) blocks immediately (if the result is
-                 * not yet available). While the implementation of get() has changed in JDK9
-                 * (not spinning any more), using CompletableFuture.get(long, TimeUnit) allows
-                 * us to avoid spinning for all current JDK versions.
-                 */
-                return future.get(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-            } catch (TimeoutException eignore) {
-                // it's ok to return null if we timeout after 292 years (2^63 nanos)
-                return null;
-            }
+            return future.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw e;
@@ -234,9 +222,7 @@ public final class FutureUtils {
         @Override
         public void run() {
             if (done) {
-                if (log.isDebugEnabled()) {
-                    log.debug("ListFutureProcessor is interrupted.");
-                }
+                log.debug("ListFutureProcessor is interrupted.");
                 return;
             }
             if (!itemsIter.hasNext()) {
@@ -299,7 +285,7 @@ public final class FutureUtils {
         }, timeout, unit);
         // when the promise is satisfied, cancel the timeout task
         promise.whenComplete((value, throwable) -> {
-                if (!task.cancel(true) && log.isDebugEnabled()) {
+                if (!task.cancel(true)) {
                     log.debug("Failed to cancel the timeout task");
                 }
             }

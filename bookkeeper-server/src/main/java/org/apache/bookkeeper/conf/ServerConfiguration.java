@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,7 @@ import com.google.common.annotations.Beta;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import java.io.File;
-import java.net.URL;
 import java.util.concurrent.TimeUnit;
-import org.apache.bookkeeper.bookie.FileChannelProvider;
 import org.apache.bookkeeper.bookie.InterleavedLedgerStorage;
 import org.apache.bookkeeper.bookie.LedgerStorage;
 import org.apache.bookkeeper.bookie.SortedLedgerStorage;
@@ -51,7 +49,6 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class ServerConfiguration extends AbstractConfiguration<ServerConfiguration> {
 
-    private static final int SECOND = 1000;
     // Ledger Storage Settings
 
     private static final ConfigKeyGroup GROUP_LEDGER_STORAGE = ConfigKeyGroup.builder("ledgerstorage")
@@ -96,10 +93,8 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String FORCE_ALLOW_COMPACTION = "forceAllowCompaction";
     protected static final String MINOR_COMPACTION_INTERVAL = "minorCompactionInterval";
     protected static final String MINOR_COMPACTION_THRESHOLD = "minorCompactionThreshold";
-    protected static final String MINOR_COMPACTION_MAX_TIME_MILLIS = "minorCompactionMaxTimeMillis";
     protected static final String MAJOR_COMPACTION_INTERVAL = "majorCompactionInterval";
     protected static final String MAJOR_COMPACTION_THRESHOLD = "majorCompactionThreshold";
-    protected static final String MAJOR_COMPACTION_MAX_TIME_MILLIS = "majorCompactionMaxTimeMillis";
     protected static final String IS_THROTTLE_BY_BYTES = "isThrottleByBytes";
     protected static final String COMPACTION_MAX_OUTSTANDING_REQUESTS = "compactionMaxOutstandingRequests";
     protected static final String COMPACTION_RATE = "compactionRate";
@@ -110,13 +105,8 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String GC_WAIT_TIME = "gcWaitTime";
     protected static final String IS_FORCE_GC_ALLOW_WHEN_NO_SPACE = "isForceGCAllowWhenNoSpace";
     protected static final String GC_OVERREPLICATED_LEDGER_WAIT_TIME = "gcOverreplicatedLedgerWaitTime";
-    protected static final String GC_OVERREPLICATED_LEDGER_MAX_CONCURRENT_REQUESTS =
-            "gcOverreplicatedLedgerMaxConcurrentRequests";
     protected static final String USE_TRANSACTIONAL_COMPACTION = "useTransactionalCompaction";
     protected static final String VERIFY_METADATA_ON_GC = "verifyMetadataOnGC";
-    protected static final String GC_ENTRYLOGMETADATA_CACHE_ENABLED = "gcEntryLogMetadataCacheEnabled";
-    protected static final String GC_ENTRYLOG_METADATA_CACHE_PATH = "gcEntryLogMetadataCachePath";
-    protected static final String USE_TARGET_ENTRYLOG_SIZE_FOR_GC = "useTargetEntryLogSizeForGc";
     // Scrub Parameters
     protected static final String LOCAL_SCRUB_PERIOD = "localScrubInterval";
     protected static final String LOCAL_SCRUB_RATE_LIMIT = "localScrubRateLimit";
@@ -136,7 +126,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String MAX_JOURNAL_SIZE = "journalMaxSizeMB";
     protected static final String MAX_BACKUP_JOURNALS = "journalMaxBackups";
     protected static final String JOURNAL_SYNC_DATA = "journalSyncData";
-    protected static final String JOURNAL_WRITE_DATA = "journalWriteData";
     protected static final String JOURNAL_ADAPTIVE_GROUP_WRITES = "journalAdaptiveGroupWrites";
     protected static final String JOURNAL_MAX_GROUP_WAIT_MSEC = "journalMaxGroupWaitMSec";
     protected static final String JOURNAL_BUFFERED_WRITES_THRESHOLD = "journalBufferedWritesThreshold";
@@ -149,10 +138,7 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String NUM_JOURNAL_CALLBACK_THREADS = "numJournalCallbackThreads";
     protected static final String JOURNAL_FORMAT_VERSION_TO_WRITE = "journalFormatVersionToWrite";
     protected static final String JOURNAL_QUEUE_SIZE = "journalQueueSize";
-    protected static final String JOURNAL_MAX_MEMORY_SIZE_MB = "journalMaxMemorySizeMb";
     protected static final String JOURNAL_PAGECACHE_FLUSH_INTERVAL_MSEC = "journalPageCacheFlushIntervalMSec";
-    protected static final String JOURNAL_CHANNEL_PROVIDER = "journalChannelProvider";
-    protected static final String JOURNAL_REUSE_FILES = "journalReuseFiles";
     // backpressure control
     protected static final String MAX_ADDS_IN_PROGRESS_LIMIT = "maxAddsInProgressLimit";
     protected static final String MAX_READS_IN_PROGRESS_LIMIT = "maxReadsInProgressLimit";
@@ -178,8 +164,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String SERVER_SOCK_LINGER = "serverTcpLinger";
     protected static final String SERVER_WRITEBUFFER_LOW_WATER_MARK = "serverWriteBufferLowWaterMark";
     protected static final String SERVER_WRITEBUFFER_HIGH_WATER_MARK = "serverWriteBufferHighWaterMark";
-
-    protected static final String SERVER_NUM_ACCEPTOR_THREADS = "serverNumAcceptorThreads";
     protected static final String SERVER_NUM_IO_THREADS = "serverNumIOThreads";
 
     // Zookeeper Parameters
@@ -189,7 +173,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String LOCK_RELEASE_OF_FAILED_LEDGER_GRACE_PERIOD = "lockReleaseOfFailedLedgerGracePeriod";
     //ReadOnly mode support on all disk full
     protected static final String READ_ONLY_MODE_ENABLED = "readOnlyModeEnabled";
-    protected static final String READ_ONLY_MODE_ON_ANY_DISK_FULL_ENABLED = "readOnlyModeOnAnyDiskFullEnabled";
     //Whether the bookie is force started in ReadOnly mode
     protected static final String FORCE_READ_ONLY_BOOKIE = "forceReadOnlyBookie";
     //Whether to persist the bookie status
@@ -205,8 +188,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String AUDITOR_PERIODIC_BOOKIE_CHECK_INTERVAL = "auditorPeriodicBookieCheckInterval";
     protected static final String AUDITOR_PERIODIC_PLACEMENT_POLICY_CHECK_INTERVAL =
                                                                 "auditorPeriodicPlacementPolicyCheckInterval";
-    protected static final String REPAIRED_PLACEMENT_POLICY_NOT_ADHERING_BOOKIE_ENABLED =
-                                                                "repairedPlacementPolicyNotAdheringBookieEnabled";
     protected static final String AUDITOR_LEDGER_VERIFICATION_PERCENTAGE = "auditorLedgerVerificationPercentage";
     protected static final String AUTO_RECOVERY_DAEMON_ENABLED = "autoRecoveryDaemonEnabled";
     protected static final String LOST_BOOKIE_RECOVERY_DELAY = "lostBookieRecoveryDelay";
@@ -214,12 +195,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     protected static final String UNDERREPLICATED_LEDGER_RECOVERY_GRACE_PERIOD =
             "underreplicatedLedgerRecoveryGracePeriod";
     protected static final String AUDITOR_REPLICAS_CHECK_INTERVAL = "auditorReplicasCheckInterval";
-    protected static final String AUDITOR_MAX_NUMBER_OF_CONCURRENT_OPEN_LEDGER_OPERATIONS =
-        "auditorMaxNumberOfConcurrentOpenLedgerOperations";
-    protected static final String AUDITOR_ACQUIRE_CONCURRENT_OPEN_LEDGER_OPERATIONS_TIMEOUT_MSEC =
-        "auditorAcquireConcurrentOpenLedgerOperationsTimeOutMSec";
-    protected static final String IN_FLIGHT_READ_ENTRY_NUM_IN_LEDGER_CHECKER = "inFlightReadEntryNumInLedgerChecker";
-
 
     // Worker Thread parameters.
     protected static final String NUM_ADD_WORKER_THREADS = "numAddWorkerThreads";
@@ -251,7 +226,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     // Statistics Parameters
     protected static final String ENABLE_STATISTICS = "enableStatistics";
     protected static final String STATS_PROVIDER_CLASS = "statsProviderClass";
-    protected static final String SANITY_CHECK_METRICS_ENABLED = "sanityCheckMetricsEnabled";
 
 
     // Rx adaptive ByteBuf allocator parameters
@@ -272,12 +246,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     // Http Server parameters
     protected static final String HTTP_SERVER_ENABLED = "httpServerEnabled";
     protected static final String HTTP_SERVER_PORT = "httpServerPort";
-    protected static final String HTTP_SERVER_HOST = "httpServerHost";
-    protected static final String HTTP_SERVER_TLS_ENABLE = "httpServerTlsEnable";
-    protected static final String HTTP_SERVER_KEY_STORE_PATH = "httpServerKeyStorePath";
-    protected static final String HTTP_SERVER_KEY_STORE_PASSWORD = "httpServerKeyStorePassword";
-    protected static final String HTTP_SERVER_TRUST_STORE_PATH = "httpServerTrustStorePath";
-    protected static final String HTTP_SERVER_TRUST_STORE_PASSWORD = "httpServerTrustStorePassword";
 
     // Lifecycle Components
     protected static final String EXTRA_SERVER_COMPONENTS = "extraServerComponents";
@@ -326,20 +294,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
 
     // Certificate role based authorization
     protected static final String AUTHORIZED_ROLES = "authorizedRoles";
-
-    protected static final String DATA_INTEGRITY_CHECKING_ENABLED = "dataIntegrityChecking";
-    protected static final String DATA_INTEGRITY_COOKIE_STAMPING_ENABLED = "dataIntegrityStampMissingCookies";
-
-    // Used for default,command until or test case
-    protected static final String DEFAULT_ROCKSDB_CONF = "defaultRocksdbConf";
-
-    // Used for ledgers db, doesn't need particular configuration
-    protected static final String ENTRY_LOCATION_ROCKSDB_CONF = "entryLocationRocksdbConf";
-
-    // Used for location index, lots of writes and much bigger dataset
-    protected static final String LEDGER_METADATA_ROCKSDB_CONF = "ledgerMetadataRocksdbConf";
-
-    protected static final String SKIP_REPLAY_JOURNAL_INVALID_RECORD = "skipReplayJournalInvalidRecord";
 
     /**
      * Construct a default configuration object.
@@ -452,28 +406,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     }
 
     /**
-     * Max number of concurrent requests in garbage collection of overreplicated ledgers.
-     *
-     * @return max number of concurrent requests
-     */
-    public int getGcOverreplicatedLedgerMaxConcurrentRequests() {
-        return this.getInt(GC_OVERREPLICATED_LEDGER_MAX_CONCURRENT_REQUESTS, 1000);
-    }
-
-    /**
-     * Max number of concurrent requests in garbage collection of overreplicated ledgers. Default: 1000
-     *
-     * @param gcOverreplicatedLedgerMaxConcurrentRequests
-     * @return server configuration
-     */
-    public ServerConfiguration setGcOverreplicatedLedgerMaxConcurrentRequests(
-            int gcOverreplicatedLedgerMaxConcurrentRequests) {
-        this.setProperty(GC_OVERREPLICATED_LEDGER_MAX_CONCURRENT_REQUESTS,
-                Integer.toString(gcOverreplicatedLedgerMaxConcurrentRequests));
-        return this;
-    }
-
-    /**
      * Get whether to use transactional compaction and using a separate log for compaction or not.
      *
      * @return use transactional compaction
@@ -512,62 +444,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     }
 
     /**
-     * Get whether the bookie is configured to use persistent
-     * entrylogMetadataMap.
-     * @return use persistent entry-log metadata map
-     */
-    public boolean isGcEntryLogMetadataCacheEnabled() {
-        return this.getBoolean(GC_ENTRYLOGMETADATA_CACHE_ENABLED, false);
-    }
-
-    /**
-     * Set whether the bookie is configured to use persistent
-     * entrylogMetadataMap.
-     * @param gcEntryLogMetadataCacheEnabled
-     * @return server configuration
-     */
-    public ServerConfiguration setGcEntryLogMetadataCacheEnabled(
-            boolean gcEntryLogMetadataCacheEnabled) {
-        this.setProperty(GC_ENTRYLOGMETADATA_CACHE_ENABLED, gcEntryLogMetadataCacheEnabled);
-        return this;
-    }
-
-    /**
-     * Get directory to persist Entrylog metadata if
-     * gcPersistentEntrylogMetadataMapEnabled is true.
-     *
-     * @return entrylog metadata-map persistent store dir path.(default: it
-     *         creates a sub-directory under each ledger
-     *         directory with name "metadata-cache". If it set, it only works for one ledger directory
-     *         configured for ledgerDirectories).
-     */
-    public String getGcEntryLogMetadataCachePath() {
-        return getString(GC_ENTRYLOG_METADATA_CACHE_PATH, null);
-    }
-
-    /**
-     * Set directory to persist Entrylog metadata if gcPersistentEntrylogMetadataMapEnabled is true.
-     * If it set, it only works for one ledger directory configured for ledgerDirectories. For multi ledgerDirectory
-     * configured, keep the default value is the best practice.
-     *
-     * @param gcEntrylogMetadataCachePath
-     * @return server configuration.
-     */
-    public ServerConfiguration setGcEntryLogMetadataCachePath(String gcEntrylogMetadataCachePath) {
-        this.setProperty(GC_ENTRYLOG_METADATA_CACHE_PATH, gcEntrylogMetadataCachePath);
-        return this;
-    }
-
-    public boolean isUseTargetEntryLogSizeForGc() {
-        return getBoolean(USE_TARGET_ENTRYLOG_SIZE_FOR_GC, false);
-    }
-
-    public ServerConfiguration setUseTargetEntryLogSizeForGc(boolean useTargetEntryLogSizeForGc) {
-        this.setProperty(USE_TARGET_ENTRYLOG_SIZE_FOR_GC, useTargetEntryLogSizeForGc);
-        return this;
-    }
-
-    /**
      * Get whether local scrub is enabled.
      *
      * @return Whether local scrub is enabled.
@@ -579,14 +455,14 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     /**
      * Get local scrub interval.
      *
-     * @return Number of seconds between scrubs, {@literal <=}0 for disabled.
+     * @return Number of seconds between scrubs, <= 0 for disabled.
      */
     public long getLocalScrubPeriod() {
         return this.getLong(LOCAL_SCRUB_PERIOD, 0);
     }
 
     /**
-     * Set local scrub period in seconds ({@literal <=}0 for disabled). Scrub will be scheduled at delays
+     * Set local scrub period in seconds (<= 0 for disabled). Scrub will be scheduled at delays
      * chosen from the interval (.5 * interval, 1.5 * interval)
      */
     public void setLocalScrubPeriod(long period) {
@@ -942,30 +818,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     }
 
     /**
-     * Set the max amount of memory that can be used by the journal.
-     *
-     * @param journalMaxMemorySizeMb
-     *            the max amount of memory for the journal
-     * @return server configuration.
-     */
-    public ServerConfiguration setJournalMaxMemorySizeMb(long journalMaxMemorySizeMb) {
-        this.setProperty(JOURNAL_MAX_MEMORY_SIZE_MB, journalMaxMemorySizeMb);
-        return this;
-    }
-
-    /**
-     * Get the max amount of memory that can be used by the journal.
-     *
-     * @return the max amount of memory for the journal
-     */
-    public long getJournalMaxMemorySizeMb() {
-        // Default is taking 5% of max direct memory (and convert to MB).
-        long estimateMaxDirectMemory = io.netty.util.internal.PlatformDependent.estimateMaxDirectMemory();
-        long defaultValue = (long) (estimateMaxDirectMemory * 0.05 / 1024 / 1024);
-        return this.getLong(JOURNAL_MAX_MEMORY_SIZE_MB, defaultValue);
-    }
-
-    /**
      * Set PageCache flush interval in second.
      *
      * @Param journalPageCacheFlushInterval
@@ -984,44 +836,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public long getJournalPageCacheFlushIntervalMSec() {
         return this.getLong(JOURNAL_PAGECACHE_FLUSH_INTERVAL_MSEC, 1000);
-    }
-
-    /**
-     * Set JournalChannelProvider classname.
-     * @param journalChannelProvider
-     *          The JournalChannelProvider classname. The class must implements {@link FileChannelProvider} and
-     *          no args constructor is needed.
-     * @return
-     */
-    public ServerConfiguration setJournalChannelProvider(String journalChannelProvider) {
-        this.setProperty(JOURNAL_CHANNEL_PROVIDER, journalChannelProvider);
-        return this;
-    }
-
-    /**
-     *
-     * @return
-     */
-    public String getJournalChannelProvider() {
-        return this.getString(JOURNAL_CHANNEL_PROVIDER, "org.apache.bookkeeper.bookie.DefaultFileChannelProvider");
-    }
-
-    /**
-     * Get reuse journal files.
-     * @return
-     */
-    public boolean getJournalReuseFiles() {
-        return this.getBoolean(JOURNAL_REUSE_FILES, false);
-    }
-
-    /**
-     * Set reuse journal files.
-     * @param journalReuseFiles
-     * @return
-     */
-    public ServerConfiguration setJournalReuseFiles(boolean journalReuseFiles) {
-        setProperty(JOURNAL_REUSE_FILES, journalReuseFiles);
-        return this;
     }
 
     /**
@@ -1249,7 +1063,7 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      * Configure the bookie to advertise a specific address.
      *
      * <p>By default, a bookie will advertise either its own IP or hostname,
-     * depending on the {@link #getUseHostNameAsBookieID()} setting.
+     * depending on the {@link getUseHostNameAsBookieID()} setting.
      *
      * <p>When the advertised is set to a non-empty string, the bookie will
      * register and advertise using this address.
@@ -1512,22 +1326,13 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     }
 
     /**
-     * Get the number of Acceptor threads.
-     *
-     * @return the number of Acceptor threads
-     */
-    public int getServerNumAcceptorThreads() {
-        return getInt(SERVER_NUM_ACCEPTOR_THREADS, 1);
-    }
-
-    /**
      * Set the number of IO threads.
      *
      * <p>
      * This is the number of threads used by Netty to handle TCP connections.
      * </p>
      *
-     * @see #getServerNumIOThreads()
+     * @see #getNumIOThreads()
      * @param numThreads number of IO threads used for bookkeeper
      * @return client configuration
      */
@@ -1679,7 +1484,7 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      * @return threshold of minor compaction
      */
     public double getMinorCompactionThreshold() {
-        return getDouble(MINOR_COMPACTION_THRESHOLD, 0.2d);
+        return getDouble(MINOR_COMPACTION_THRESHOLD, 0.2f);
     }
 
     /**
@@ -1707,7 +1512,7 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      * @return threshold of major compaction
      */
     public double getMajorCompactionThreshold() {
-        return getDouble(MAJOR_COMPACTION_THRESHOLD, 0.8d);
+        return getDouble(MAJOR_COMPACTION_THRESHOLD, 0.8f);
     }
 
     /**
@@ -1721,33 +1526,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public ServerConfiguration setMajorCompactionThreshold(double threshold) {
         setProperty(MAJOR_COMPACTION_THRESHOLD, threshold);
-        return this;
-    }
-
-    /**
-     * Get the maximum milliseconds to run major compaction. If {@literal <=}0 the
-     * thread will run until all compaction is completed.
-     *
-     * @return limit
-     *           The number of milliseconds to run compaction.
-     */
-    public long getMajorCompactionMaxTimeMillis() {
-        return getLong(MAJOR_COMPACTION_MAX_TIME_MILLIS, -1);
-    }
-
-    /**
-     * Set the maximum milliseconds to run major compaction. If {@literal <=}0 the
-     * thread will run until all compaction is completed.
-     *
-     * @see #getMajorCompactionMaxTimeMillis()
-     *
-     * @param majorCompactionMaxTimeMillis
-     *           The number of milliseconds to run compaction.
-     *
-     * @return  server configuration
-     */
-    public ServerConfiguration setMajorCompactionMaxTimeMillis(long majorCompactionMaxTimeMillis) {
-        setProperty(MAJOR_COMPACTION_MAX_TIME_MILLIS, majorCompactionMaxTimeMillis);
         return this;
     }
 
@@ -1798,33 +1576,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public ServerConfiguration setMajorCompactionInterval(long interval) {
         setProperty(MAJOR_COMPACTION_INTERVAL, interval);
-        return this;
-    }
-
-    /**
-     * Get the maximum milliseconds to run minor compaction. If {@literal <=}0 the
-     * thread will run until all compaction is completed.
-     *
-     * @return limit
-     *           The number of milliseconds to run compaction.
-     */
-    public long getMinorCompactionMaxTimeMillis() {
-        return getLong(MINOR_COMPACTION_MAX_TIME_MILLIS, -1);
-    }
-
-    /**
-     * Set the maximum milliseconds to run minor compaction. If {@literal <=}0 the
-     * thread will run until all compaction is completed.
-     *
-     * @see #getMinorCompactionMaxTimeMillis()
-     *
-     * @param minorCompactionMaxTimeMillis
-     *           The number of milliseconds to run compaction.
-     *
-     * @return  server configuration
-     */
-    public ServerConfiguration setMinorCompactionMaxTimeMillis(long minorCompactionMaxTimeMillis) {
-        setProperty(MINOR_COMPACTION_MAX_TIME_MILLIS, minorCompactionMaxTimeMillis);
         return this;
     }
 
@@ -2159,7 +1910,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      *          number of threads to handle journal callbacks.
      * @return server configuration
      */
-    @Deprecated
     public ServerConfiguration setNumJournalCallbackThreads(int numThreads) {
         setProperty(NUM_JOURNAL_CALLBACK_THREADS, numThreads);
         return this;
@@ -2170,7 +1920,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      *
      * @return the number of threads that handle journal callbacks.
      */
-    @Deprecated
     public int getNumJournalCallbackThreads() {
         return getInt(NUM_JOURNAL_CALLBACK_THREADS, 1);
     }
@@ -2273,29 +2022,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public boolean getJournalSyncData() {
         return getBoolean(JOURNAL_SYNC_DATA, true);
-    }
-
-    /**
-     * Should the data be written to journal before acknowledgment.
-     *
-     * <p>Default is true
-     *
-     * @return
-     */
-    public boolean getJournalWriteData() {
-        return getBoolean(JOURNAL_WRITE_DATA, true);
-    }
-
-    /**
-     * Should the data be written to journal before acknowledgment.
-     *
-     * <p>Default is true
-     *
-     * @return
-     */
-    public ServerConfiguration setJournalWriteData(boolean journalWriteData) {
-        setProperty(JOURNAL_WRITE_DATA, journalWriteData);
-        return this;
     }
 
     /**
@@ -2440,27 +2166,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public boolean isReadOnlyModeEnabled() {
         return getBoolean(READ_ONLY_MODE_ENABLED, true);
-    }
-
-    /**
-     * Set whether the bookie is able to go into read-only mode when any disk is full.
-     * If this set to false, it will behave to READ_ONLY_MODE_ENABLED flag.
-     *
-     * @param enabled whether to enable read-only mode when any disk is full.
-     * @return
-     */
-    public ServerConfiguration setReadOnlyModeOnAnyDiskFullEnabled(boolean enabled) {
-        setProperty(READ_ONLY_MODE_ON_ANY_DISK_FULL_ENABLED, enabled);
-        return this;
-    }
-
-    /**
-     * Get whether read-only mode is enable when any disk is full. The default is false.
-     *
-     * @return boolean
-     */
-    public boolean isReadOnlyModeOnAnyDiskFullEnabled() {
-        return getBoolean(READ_ONLY_MODE_ON_ANY_DISK_FULL_ENABLED, false);
     }
 
     /**
@@ -2637,31 +2342,10 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      * Get the regularity at which the auditor does placement policy check of
      * all ledgers, which are closed.
      *
-     * @return The interval in seconds. By default, it is disabled.
+     * @return The interval in seconds. By default it is disabled.
      */
     public long getAuditorPeriodicPlacementPolicyCheckInterval() {
         return getLong(AUDITOR_PERIODIC_PLACEMENT_POLICY_CHECK_INTERVAL, 0);
-    }
-
-    public void setRepairedPlacementPolicyNotAdheringBookieEnable(boolean enabled) {
-        setProperty(REPAIRED_PLACEMENT_POLICY_NOT_ADHERING_BOOKIE_ENABLED, enabled);
-    }
-
-    /**
-     * Now the feature only support RackawareEnsemblePlacementPolicy.
-     *
-     * In Auditor, it combines with {@link #getAuditorPeriodicPlacementPolicyCheckInterval}, to control is marked
-     * ledger id to under replication managed when found a ledger ensemble not adhere to placement policy.
-     * In ReplicationWorker, to control is to repair the ledger which the ensemble does not adhere to the placement
-     * policy. By default, it is disabled.
-     *
-     * If you want to enable this feature, there maybe lots of ledger will be mark underreplicated.
-     * The replicationWorker will replicate lots of ledger, it will increase read request and write request in bookie
-     * server. You should set a suitable rereplicationEntryBatchSize to avoid bookie server pressure.
-     *
-     */
-    public boolean isRepairedPlacementPolicyNotAdheringBookieEnable() {
-        return getBoolean(REPAIRED_PLACEMENT_POLICY_NOT_ADHERING_BOOKIE_ENABLED, false);
     }
 
     /**
@@ -2710,41 +2394,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     public long getAuditorPeriodicReplicasCheckInterval() {
         return getLong(AUDITOR_REPLICAS_CHECK_INTERVAL, 0);
     }
-
-    /**
-     * Get the semaphore limit value of getting ledger from zookeeper in auto recovery.
-     *
-     * @return The semaphore value. By default it is 500.
-     */
-    public int getAuditorMaxNumberOfConcurrentOpenLedgerOperations() {
-        return getInt(AUDITOR_MAX_NUMBER_OF_CONCURRENT_OPEN_LEDGER_OPERATIONS, 500);
-    }
-
-    /**
-     * Set the semaphore limit value for getting ledger from zookeeper in auto recovery.
-     * @param semaphore
-     */
-    public void setAuditorMaxNumberOfConcurrentOpenLedgerOperations(int semaphore) {
-        setProperty(AUDITOR_MAX_NUMBER_OF_CONCURRENT_OPEN_LEDGER_OPERATIONS, semaphore);
-    }
-
-    /**
-     * Get the acquire concurrent open ledger operations timeout.
-     *
-     * @return The timeout values. By default it is 120000ms
-     */
-    public int getAuditorAcquireConcurrentOpenLedgerOperationsTimeoutMSec() {
-        return getInt(AUDITOR_ACQUIRE_CONCURRENT_OPEN_LEDGER_OPERATIONS_TIMEOUT_MSEC, 120000);
-    }
-
-    /**
-     * Set the acquire concurrent open ledger operations timeout.
-     * @param timeoutMs
-     */
-    public void setAuditorAcquireConcurrentOpenLedgerOperationsTimeoutMSec(int timeoutMs) {
-        setProperty(AUDITOR_ACQUIRE_CONCURRENT_OPEN_LEDGER_OPERATIONS_TIMEOUT_MSEC, timeoutMs);
-    }
-
 
     /**
      * Set what percentage of a ledger (fragment)'s entries will be verified.
@@ -3146,28 +2795,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
         return this;
     }
 
-
-    /**
-     * Flag to enable sanity check metrics in bookie stats. Defaults to false/disabled.
-     *
-     * @return true, if bookie collects sanity check metrics in stats
-     */
-    public boolean isSanityCheckMetricsEnabled() {
-        return getBoolean(SANITY_CHECK_METRICS_ENABLED, false);
-    }
-
-    /**
-     * Enable sanity check metrics in bookie stats.
-     *
-     * @param sanityCheckMetricsEnabled
-     *          flag to enable sanity check metrics
-     * @return server configuration
-     */
-    public ServerConfiguration setSanityCheckMetricsEnabled(boolean sanityCheckMetricsEnabled) {
-        setProperty(SANITY_CHECK_METRICS_ENABLED, sanityCheckMetricsEnabled);
-        return this;
-    }
-
     /**
      * Validate the configuration.
      * @throws ConfigurationException
@@ -3200,12 +2827,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
         if ((getJournalFormatVersionToWrite() >= 6) ^ (getFileInfoFormatVersionToWrite() >= 1)) {
             throw new ConfigurationException("For persisiting explicitLac, journalFormatVersionToWrite should be >= 6"
                     + "and FileInfoFormatVersionToWrite should be >= 1");
-        }
-        if (getMinorCompactionInterval() > 0 && getMinorCompactionInterval() * SECOND < getGcWaitTime()) {
-            throw new ConfigurationException("minorCompactionInterval should be >= gcWaitTime.");
-        }
-        if (getMajorCompactionInterval() > 0 && getMajorCompactionInterval() * SECOND < getGcWaitTime()) {
-            throw new ConfigurationException("majorCompactionInterval should be >= gcWaitTime.");
         }
     }
 
@@ -3593,129 +3214,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
     }
 
     /**
-     * Get the http server host.
-     *
-     * @return http server host
-     */
-    public String getHttpServerHost() {
-        return getString(HTTP_SERVER_HOST, "0.0.0.0");
-    }
-
-    /**
-     * Set Http server host listening on.
-     *
-     * @param host
-     *          host to listen on
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerHost(String host) {
-        setProperty(HTTP_SERVER_HOST, host);
-        return this;
-    }
-
-    /**
-     * Get if Http Server Tls enable.
-     * @return
-     */
-    public boolean isHttpServerTlsEnable() {
-        return getBoolean(HTTP_SERVER_TLS_ENABLE, false);
-    }
-
-    /**
-     * Set if Http Server Tls enable.
-     * @param tlsEnable
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerTlsEnable(boolean tlsEnable) {
-        setProperty(HTTP_SERVER_TLS_ENABLE, tlsEnable);
-        return this;
-    }
-
-    /**
-     * Get the http server keystore path.
-     *
-     * @return http server keystore path
-     */
-    public String getHttpServerKeystorePath() {
-        return getString(HTTP_SERVER_KEY_STORE_PATH);
-    }
-
-    /**
-     * Set Http server keystore path.
-     *
-     * @param keystorePath
-     *          http server keystore path
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerKeystorePath(String keystorePath) {
-        setProperty(HTTP_SERVER_KEY_STORE_PATH, keystorePath);
-        return this;
-    }
-
-    /**
-     * Get the http server keyStore password.
-     *
-     * @return http server keyStore password
-     */
-    public String getHttpServerKeystorePassword() {
-        return getString(HTTP_SERVER_KEY_STORE_PASSWORD);
-    }
-
-    /**
-     * Set Http server keyStore password.
-     *
-     * @param keyStorePassword
-     *          http server keyStore password
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerKeyStorePassword(String keyStorePassword) {
-        setProperty(HTTP_SERVER_KEY_STORE_PASSWORD, keyStorePassword);
-        return this;
-    }
-
-    /**
-     * Get the http server trustStore path.
-     *
-     * @return http server trustStore path
-     */
-    public String getHttpServerTrustStorePath() {
-        return getString(HTTP_SERVER_TRUST_STORE_PATH);
-    }
-
-    /**
-     * Set Http server trustStore path.
-     *
-     * @param trustStorePath
-     *          http server trustStore path
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerTrustStorePath(String trustStorePath) {
-        setProperty(HTTP_SERVER_TRUST_STORE_PATH, trustStorePath);
-        return this;
-    }
-
-    /**
-     * Get the http server trustStore password.
-     *
-     * @return http server trustStore password
-     */
-    public String getHttpServerTrustStorePassword() {
-        return getString(HTTP_SERVER_KEY_STORE_PASSWORD);
-    }
-
-    /**
-     * Set Http server trustStore password.
-     *
-     * @param trustStorePassword
-     *          http server trustStore password
-     * @return server configuration
-     */
-    public ServerConfiguration setHttpServerTrustStorePasswordPassword(String trustStorePassword) {
-        setProperty(HTTP_SERVER_TRUST_STORE_PASSWORD, trustStorePassword);
-        return this;
-    }
-
-    /**
      * Get the extra list of server lifecycle components to enable on a bookie server.
      *
      * @return the extra list of server lifecycle components to enable on a bookie server.
@@ -3950,156 +3448,6 @@ public class ServerConfiguration extends AbstractConfiguration<ServerConfigurati
      */
     public ServerConfiguration setAuthorizedRoles(String roles) {
         this.setProperty(AUTHORIZED_ROLES, roles);
-        return this;
-    }
-
-    /**
-     * Get in flight read entry number when ledger checker.
-     * Default value is -1 which it is unlimited  when ledger checker.
-     *
-     * @return read entry number of in flight.
-     */
-    public int getInFlightReadEntryNumInLedgerChecker(){
-        return getInt(IN_FLIGHT_READ_ENTRY_NUM_IN_LEDGER_CHECKER, -1);
-    }
-
-    /**
-     * Enabled data integrity checker.
-     * The data integrity checker checks that the bookie has all the entries which
-     * ledger metadata asserts it has.
-     * The checker runs on startup (periodic will be added later).
-     * The changes how cookies are handled. If a directory is found to be missing a cookie,
-     * the check runs. The check is divided into two parts, preboot and full.
-     * The preboot check ensures that it is safe to boot the bookie; the bookie will not
-     * vote in any operation that contradicts a previous vote.
-     * The full check ensures that any ledger that claims to have entries on the bookie,
-     * truly does have data on the bookie. Any missing entries are copies from available
-     * replicas.
-     */
-    public ServerConfiguration setDataIntegrityCheckingEnabled(boolean enabled) {
-        this.setProperty(DATA_INTEGRITY_CHECKING_ENABLED,
-                         Boolean.toString(enabled));
-        return this;
-    }
-
-    /**
-     * @see #setDataIntegrityCheckingEnabled
-     */
-    public boolean isDataIntegrityCheckingEnabled() {
-        return this.getBoolean(DATA_INTEGRITY_CHECKING_ENABLED, false);
-    }
-
-    /**
-     * When this config is set to true and the data integrity checker is also enabled then
-     * any missing cookie files in the ledger directories do not prevent the bookie from
-     * booting. Missing cookie files usually indicate an empty disk has been mounted, which
-     * might be after a disk failure (all data lost) or a provisioning error (wrong disk mounted).
-     * If there are missing cookie files then:
-     * - a new cookie is stamped (written to each ledger directory and to the co-ordination service, eg: zookeeper).
-     * - the data integrity checker will attempt to repair any lost data by sourcing the lost entries from other bookies
-     * If any cookies do not match the master cookie, then cookie validation still fails as normal.
-     */
-    public ServerConfiguration setDataIntegrityStampMissingCookiesEnabled(boolean enabled) {
-        this.setProperty(DATA_INTEGRITY_COOKIE_STAMPING_ENABLED,
-                Boolean.toString(enabled));
-        return this;
-    }
-
-    /**
-     * @see #setDataIntegrityStampMissingCookiesEnabled
-     */
-    public boolean isDataIntegrityStampMissingCookiesEnabled() {
-        return this.getBoolean(DATA_INTEGRITY_COOKIE_STAMPING_ENABLED, false);
-    }
-
-
-    /**
-     * When this config is set to true,if we replay journal failed, we will skip.
-     * @param skipReplayJournalInvalidRecord
-     * @return
-     */
-    public ServerConfiguration setSkipReplayJournalInvalidRecord(boolean skipReplayJournalInvalidRecord) {
-        this.setProperty(SKIP_REPLAY_JOURNAL_INVALID_RECORD,
-                Boolean.toString(skipReplayJournalInvalidRecord));
-        return this;
-    }
-
-    /**
-     * @see #isSkipReplayJournalInvalidRecord .
-     */
-    public boolean isSkipReplayJournalInvalidRecord() {
-        return this.getBoolean(SKIP_REPLAY_JOURNAL_INVALID_RECORD, false);
-    }
-
-    /**
-     * Get default rocksdb conf.
-     *
-     * @return String configured default rocksdb conf.
-     */
-    public String getDefaultRocksDBConf() {
-        String defaultPath = "conf/default_rocksdb.conf";
-        URL defURL = getClass().getClassLoader().getResource(defaultPath);
-        if (defURL != null) {
-            defaultPath = defURL.getPath();
-        }
-        return getString(DEFAULT_ROCKSDB_CONF, defaultPath);
-    }
-
-    /**
-     * Set default rocksdb conf.
-     *
-     * @return Configuration Object with default rocksdb conf
-     */
-    public ServerConfiguration setDefaultRocksDBConf(String defaultRocksdbConf) {
-        this.setProperty(DEFAULT_ROCKSDB_CONF, defaultRocksdbConf);
-        return this;
-    }
-
-    /**
-     * Get entry Location rocksdb conf.
-     *
-     * @return String configured entry Location rocksdb conf.
-     */
-    public String getEntryLocationRocksdbConf() {
-        String defaultPath = "conf/entry_location_rocksdb.conf";
-        URL defURL = getClass().getClassLoader().getResource(defaultPath);
-        if (defURL != null) {
-            defaultPath = defURL.getPath();
-        }
-        return getString(ENTRY_LOCATION_ROCKSDB_CONF, defaultPath);
-    }
-
-    /**
-     * Set entry Location rocksdb conf.
-     *
-     * @return Configuration Object with entry Location rocksdb conf
-     */
-    public ServerConfiguration setEntryLocationRocksdbConf(String entryLocationRocksdbConf) {
-        this.setProperty(ENTRY_LOCATION_ROCKSDB_CONF, entryLocationRocksdbConf);
-        return this;
-    }
-
-    /**
-     * Get ledger metadata rocksdb conf.
-     *
-     * @return String configured ledger metadata rocksdb conf.
-     */
-    public String getLedgerMetadataRocksdbConf() {
-        String defaultPath = "conf/ledger_metadata_rocksdb.conf";
-        URL defURL = getClass().getClassLoader().getResource(defaultPath);
-        if (defURL != null) {
-            defaultPath = defURL.getPath();
-        }
-        return getString(LEDGER_METADATA_ROCKSDB_CONF, defaultPath);
-    }
-
-    /**
-     * Set ledger metadata rocksdb conf.
-     *
-     * @return Configuration Object with ledger metadata rocksdb conf
-     */
-    public ServerConfiguration setLedgerMetadataRocksdbConf(String ledgerMetadataRocksdbConf) {
-        this.setProperty(LEDGER_METADATA_ROCKSDB_CONF, ledgerMetadataRocksdbConf);
         return this;
     }
 }

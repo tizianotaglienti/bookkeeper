@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import org.apache.bookkeeper.common.concurrent.FutureEventListener;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.common.util.OrderedScheduler;
@@ -397,7 +398,7 @@ class ReadAheadEntryReader implements
         return isInitialized;
     }
 
-    private void orderedSubmit(Runnable runnable) {
+    private void orderedSubmit(SafeRunnable runnable) {
         synchronized (this) {
             if (null != closePromise) {
                 return;
@@ -607,7 +608,7 @@ class ReadAheadEntryReader implements
 
         if (cause instanceof EndOfLogSegmentException) {
             // we reach end of the log segment
-            moveToNextLogSegment(currentSegmentReader);
+            moveToNextLogSegment();
             return;
         }
         if (cause instanceof IOException) {
@@ -905,15 +906,11 @@ class ReadAheadEntryReader implements
         return true;
     }
 
-    void moveToNextLogSegment(final SegmentReader prevSegmentReader) {
+    void moveToNextLogSegment() {
         orderedSubmit(new CloseableRunnable() {
             @Override
             public void safeRun() {
-                // Do not move forward if previous enqueued runnable
-                // already moved the segment forward.
-                if (prevSegmentReader == currentSegmentReader) {
-                    unsafeMoveToNextLogSegment();
-                }
+                unsafeMoveToNextLogSegment();
             }
         });
     }

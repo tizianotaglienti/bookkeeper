@@ -44,7 +44,6 @@ import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.ReferenceCountUtil;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -152,10 +151,10 @@ public class PByteBufSimpleTableImpl
         ))
         .thenApply(response -> KvUtils.newRangeResult(response, resultFactory, kvFactory))
         .whenComplete((value, cause) -> {
-            ReferenceCountUtil.release(pKey);
-            ReferenceCountUtil.release(lKey);
+            pKey.release();
+            lKey.release();
             if (null != option.endKey()) {
-                ReferenceCountUtil.release(option.endKey());
+                option.endKey().release();
             }
         });
     }
@@ -176,9 +175,9 @@ public class PByteBufSimpleTableImpl
             ))
             .thenApply(response -> KvUtils.newPutResult(response, resultFactory, kvFactory))
             .whenComplete((ignored, cause) -> {
-                ReferenceCountUtil.release(pKey);
-                ReferenceCountUtil.release(lKey);
-                ReferenceCountUtil.release(value);
+                pKey.release();
+                lKey.release();
+                value.release();
             });
     }
 
@@ -200,10 +199,10 @@ public class PByteBufSimpleTableImpl
         ))
         .thenApply(response -> KvUtils.newDeleteResult(response, resultFactory, kvFactory))
         .whenComplete((ignored, cause) -> {
-            ReferenceCountUtil.release(pKey);
-            ReferenceCountUtil.release(lKey);
+            pKey.release();
+            lKey.release();
             if (null != option.endKey()) {
-                ReferenceCountUtil.release(option.endKey());
+                option.endKey().release();
             }
         });
     }
@@ -223,8 +222,8 @@ public class PByteBufSimpleTableImpl
         ))
         .thenApply(response -> KvUtils.newIncrementResult(response, resultFactory, kvFactory))
         .whenComplete((ignored, cause) -> {
-            ReferenceCountUtil.release(pKey);
-            ReferenceCountUtil.release(lKey);
+            pKey.release();
+            lKey.release();
         });
     }
 
@@ -298,7 +297,7 @@ public class PByteBufSimpleTableImpl
             ))
             .thenApply(response -> KvUtils.newKvTxnResult(response, resultFactory, kvFactory))
             .whenComplete((ignored, cause) -> {
-                ReferenceCountUtil.release(pKey);
+                pKey.release();
                 for (AutoCloseable resource : resourcesToRelease) {
                     closeResource(resource);
                 }

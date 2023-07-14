@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,6 @@
  */
 package org.apache.bookkeeper.http.servlet;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Enumeration;
@@ -70,7 +69,6 @@ public class BookieHttpServiceServlet extends HttpServlet {
   }
 
   @Override
-  @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
   protected void service(HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException {
     HttpServiceRequest request = new HttpServiceRequest()
                                 .setMethod(httpServerMethod(httpRequest))

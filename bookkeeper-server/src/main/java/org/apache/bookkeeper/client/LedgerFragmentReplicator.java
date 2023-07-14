@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,14 +24,10 @@ import static org.apache.bookkeeper.replication.ReplicationStats.NUM_BYTES_READ;
 import static org.apache.bookkeeper.replication.ReplicationStats.NUM_BYTES_WRITTEN;
 import static org.apache.bookkeeper.replication.ReplicationStats.NUM_ENTRIES_READ;
 import static org.apache.bookkeeper.replication.ReplicationStats.NUM_ENTRIES_WRITTEN;
-import static org.apache.bookkeeper.replication.ReplicationStats.READ_DATA_LATENCY;
 import static org.apache.bookkeeper.replication.ReplicationStats.REPLICATION_WORKER_SCOPE;
-import static org.apache.bookkeeper.replication.ReplicationStats.WRITE_DATA_LATENCY;
 
-import com.google.common.util.concurrent.RateLimiter;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCounted;
+
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,14 +35,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+
 import org.apache.bookkeeper.client.AsyncCallback.ReadCallback;
 import org.apache.bookkeeper.client.api.WriteFlag;
-import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookieProtocol;
@@ -58,7 +53,6 @@ import org.apache.bookkeeper.stats.OpStatsLogger;
 import org.apache.bookkeeper.stats.StatsLogger;
 import org.apache.bookkeeper.stats.annotations.StatsDoc;
 import org.apache.bookkeeper.util.ByteBufList;
-import org.apache.bookkeeper.util.MathUtils;
 import org.apache.zookeeper.AsyncCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,43 +90,18 @@ public class LedgerFragmentReplicator {
         help = "The distribution of size of entries written by the replicator"
     )
     private final OpStatsLogger numBytesWritten;
-    @StatsDoc(
-            name = READ_DATA_LATENCY,
-            help = "The distribution of latency of read entries by the replicator"
-    )
-    private final OpStatsLogger readDataLatency;
-    @StatsDoc(
-            name = WRITE_DATA_LATENCY,
-            help = "The distribution of latency of write entries by the replicator"
-    )
-    private final OpStatsLogger writeDataLatency;
 
-    protected Throttler replicationThrottle = null;
-
-    private AtomicInteger averageEntrySize;
-
-    private static final int INITIAL_AVERAGE_ENTRY_SIZE = 1024;
-    private static final double AVERAGE_ENTRY_SIZE_RATIO = 0.8;
-    private ClientConfiguration conf;
-
-    public LedgerFragmentReplicator(BookKeeper bkc, StatsLogger statsLogger, ClientConfiguration conf) {
+    public LedgerFragmentReplicator(BookKeeper bkc, StatsLogger statsLogger) {
         this.bkc = bkc;
         this.statsLogger = statsLogger;
         numEntriesRead = this.statsLogger.getCounter(NUM_ENTRIES_READ);
         numBytesRead = this.statsLogger.getOpStatsLogger(NUM_BYTES_READ);
         numEntriesWritten = this.statsLogger.getCounter(NUM_ENTRIES_WRITTEN);
         numBytesWritten = this.statsLogger.getOpStatsLogger(NUM_BYTES_WRITTEN);
-        readDataLatency = this.statsLogger.getOpStatsLogger(READ_DATA_LATENCY);
-        writeDataLatency = this.statsLogger.getOpStatsLogger(WRITE_DATA_LATENCY);
-        if (conf.getReplicationRateByBytes() > 0) {
-            this.replicationThrottle = new Throttler(conf.getReplicationRateByBytes());
-        }
-        averageEntrySize = new AtomicInteger(INITIAL_AVERAGE_ENTRY_SIZE);
-        this.conf = conf;
     }
 
-    public LedgerFragmentReplicator(BookKeeper bkc, ClientConfiguration conf) {
-        this(bkc, NullStatsLogger.INSTANCE, conf);
+    public LedgerFragmentReplicator(BookKeeper bkc) {
+        this(bkc, NullStatsLogger.INSTANCE);
     }
 
     private static final Logger LOG = LoggerFactory
@@ -187,9 +156,6 @@ public class LedgerFragmentReplicator {
         MultiCallback ledgerFragmentEntryMcb = new MultiCallback(
                 entriesToReplicate.size(), ledgerFragmentMcb, null, BKException.Code.OK,
                 BKException.Code.LedgerRecoveryException);
-        if (this.replicationThrottle != null) {
-            this.replicationThrottle.resetRate(this.conf.getReplicationRateByBytes());
-        }
         for (final Long entryId : entriesToReplicate) {
             recoverLedgerFragmentEntry(entryId, lh, ledgerFragmentEntryMcb,
                     newBookies, onReadEntryFailureCallback);
@@ -344,11 +310,6 @@ public class LedgerFragmentReplicator {
         final long ledgerId = lh.getId();
         final AtomicInteger numCompleted = new AtomicInteger(0);
         final AtomicBoolean completed = new AtomicBoolean(false);
-
-        if (replicationThrottle != null) {
-            replicationThrottle.acquire(averageEntrySize.get());
-        }
-
         final WriteCallback multiWriteCallback = new WriteCallback() {
             @Override
             public void writeComplete(int rc, long ledgerId, long entryId, BookieId addr, Object ctx) {
@@ -373,8 +334,6 @@ public class LedgerFragmentReplicator {
                 }
             }
         };
-
-        long startReadEntryTime = MathUtils.nowInNano();
         /*
          * Read the ledger entry using the LedgerHandle. This will allow us to
          * read the entry from one of the other replicated bookies other than
@@ -391,10 +350,6 @@ public class LedgerFragmentReplicator {
                     ledgerFragmentEntryMcb.processResult(rc, null, null);
                     return;
                 }
-
-                readDataLatency.registerSuccessfulEvent(MathUtils.elapsedNanos(startReadEntryTime),
-                        TimeUnit.NANOSECONDS);
-
                 /*
                  * Now that we've read the ledger entry, write it to the new
                  * bookie we've selected.
@@ -404,38 +359,19 @@ public class LedgerFragmentReplicator {
                 final long dataLength = data.length;
                 numEntriesRead.inc();
                 numBytesRead.registerSuccessfulValue(dataLength);
-
-                ReferenceCounted toSend = lh.getDigestManager()
+                ByteBufList toSend = lh.getDigestManager()
                         .computeDigestAndPackageForSending(entryId,
                                 lh.getLastAddConfirmed(), entry.getLength(),
-                                Unpooled.wrappedBuffer(data, 0, data.length),
-                                lh.getLedgerKey(),
-                                0
-                                );
-                if (replicationThrottle != null) {
-                    if (toSend instanceof ByteBuf) {
-                        updateAverageEntrySize(((ByteBuf) toSend).readableBytes());
-                    } else if (toSend instanceof ByteBufList) {
-                        updateAverageEntrySize(((ByteBufList) toSend).readableBytes());
-                    }
-                }
+                                Unpooled.wrappedBuffer(data, 0, data.length));
                 for (BookieId newBookie : newBookies) {
-                    long startWriteEntryTime = MathUtils.nowInNano();
                     bkc.getBookieClient().addEntry(newBookie, lh.getId(),
-                            lh.getLedgerKey(), entryId, toSend,
+                            lh.getLedgerKey(), entryId, ByteBufList.clone(toSend),
                             multiWriteCallback, dataLength, BookieProtocol.FLAG_RECOVERY_ADD,
                             false, WriteFlag.NONE);
-                    writeDataLatency.registerSuccessfulEvent(
-                           MathUtils.elapsedNanos(startWriteEntryTime), TimeUnit.NANOSECONDS);
                 }
                 toSend.release();
             }
         }, null);
-    }
-
-    private void updateAverageEntrySize(int toSendSize) {
-        averageEntrySize.updateAndGet(value -> (int) (value * AVERAGE_ENTRY_SIZE_RATIO
-                + (1 - AVERAGE_ENTRY_SIZE_RATIO) * toSendSize));
     }
 
     /**
@@ -501,7 +437,7 @@ public class LedgerFragmentReplicator {
 
         updateLoop.run().whenComplete((result, ex) -> {
                 if (ex == null) {
-                    LOG.info("Updated ZK to point ledger fragments"
+                    LOG.info("Updated ZK for ledgerId: ({}:{}) to point ledger fragments"
                              + " from old bookies to new bookies: {}", oldBookie2NewBookie);
 
                     ensembleUpdatedCb.processResult(BKException.Code.OK, null, null);
@@ -513,28 +449,5 @@ public class LedgerFragmentReplicator {
                             null, null);
                 }
             });
-    }
-
-    static class Throttler {
-        private final RateLimiter rateLimiter;
-
-        Throttler(int throttleBytes) {
-            this.rateLimiter = RateLimiter.create(throttleBytes);
-        }
-
-        // reset rate of limiter before compact one entry log file
-        void resetRate(int throttleBytes) {
-            this.rateLimiter.setRate(throttleBytes);
-        }
-
-        // get rate of limiter for unit test
-        double getRate() {
-            return this.rateLimiter.getRate();
-        }
-
-        // acquire. if bybytes: bytes of this entry; if byentries: 1.
-        void acquire(int permits) {
-            rateLimiter.acquire(permits);
-        }
     }
 }

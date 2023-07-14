@@ -21,10 +21,13 @@ package org.apache.bookkeeper.metadata.etcd;
 import static org.apache.bookkeeper.metadata.etcd.EtcdUtils.msResult;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import io.etcd.jetcd.Lease;
 import io.etcd.jetcd.lease.LeaseKeepAliveResponse;
 import io.etcd.jetcd.support.CloseableClient;
+
 import io.grpc.stub.StreamObserver;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -33,6 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +53,7 @@ class EtcdBookieRegister implements AutoCloseable, Runnable, Supplier<Long> {
     private final Lease leaseClient;
     private final long ttlSeconds;
     private final ScheduledExecutorService executor;
-    private RegistrationListener regListener;
+    private final RegistrationListener regListener;
     private volatile CompletableFuture<Long> leaseFuture = new CompletableFuture<>();
     private volatile CompletableFuture<Void> keepAliveFuture = new CompletableFuture<>();
 
@@ -61,18 +65,15 @@ class EtcdBookieRegister implements AutoCloseable, Runnable, Supplier<Long> {
     private Future<?> runFuture = null;
 
     EtcdBookieRegister(Lease leaseClient,
-                       long ttlSeconds) {
+                       long ttlSeconds,
+                       RegistrationListener regListener) {
+        this.regListener = regListener;
         this.leaseClient = leaseClient;
         this.ttlSeconds = ttlSeconds;
         this.executor = Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder()
                 .setNameFormat("bookie-etcd-keepalive-thread")
                 .build());
-    }
-
-    public EtcdBookieRegister addRegistrationListener(RegistrationListener regListener) {
-        this.regListener = regListener;
-        return this;
     }
 
     long getTtlSeconds() {
@@ -115,7 +116,7 @@ class EtcdBookieRegister implements AutoCloseable, Runnable, Supplier<Long> {
 
                 @Override
                 public void onCompleted() {
-                    log.info("lease completed! leaseId {}", leaseId);
+                    log.info("{} lease completed! leaseId {}", leaseId);
                     keepAliveFuture.cancel(true);
                 }
             });
@@ -132,7 +133,7 @@ class EtcdBookieRegister implements AutoCloseable, Runnable, Supplier<Long> {
                 newLeaseIfNeeded();
                 nextWaitTimeMs = 100L;
             } catch (MetadataStoreException e) {
-                log.error("Failed to grant a new lease for leaseId {}", leaseId, e);
+                log.error("Failed to grant a new lease for leaseId", leaseId, e);
                 try {
                     TimeUnit.MILLISECONDS.sleep(nextWaitTimeMs);
                     nextWaitTimeMs *= 2;

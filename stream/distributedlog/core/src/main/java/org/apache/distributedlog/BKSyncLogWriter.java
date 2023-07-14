@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -89,17 +89,13 @@ class BKSyncLogWriter extends BKAbstractLogWriter implements LogWriter {
     public long commit() throws IOException {
         checkClosedOrInError("commit");
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("FlushAndSync Started");
-        }
+        LOG.debug("FlushAndSync Started");
         long highestTransactionId = 0;
         BKLogSegmentWriter writer = getCachedLogWriter();
         if (null != writer) {
             highestTransactionId = Math.max(highestTransactionId, Utils.ioResult(writer.commit()));
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("FlushAndSync Completed");
-            }
-        } else if (LOG.isDebugEnabled()) {
+            LOG.debug("FlushAndSync Completed");
+        } else {
             LOG.debug("FlushAndSync Completed - Nothing to Flush");
         }
         return highestTransactionId;

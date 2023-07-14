@@ -124,10 +124,8 @@ public class ConfigurationSubscription {
         // Reload if config exists.
         Set<String> confKeys = Sets.newHashSet();
         for (FileConfiguration fileConfig : fileConfigs) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Check and reload config, file={}, lastModified={}", fileConfig.getFile(),
-                        fileConfig.getFile().lastModified());
-            }
+            LOG.debug("Check and reload config, file={}, lastModified={}", fileConfig.getFile(),
+                    fileConfig.getFile().lastModified());
             fileConfig.reload();
             // load keys
             Iterator keyIter = fileConfig.getKeys();
@@ -174,9 +172,7 @@ public class ConfigurationSubscription {
     }
 
     private void clearViewProperty(String key) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Removing property, key={}", key);
-        }
+        LOG.debug("Removing property, key={}", key);
         viewConfig.clearProperty(key);
     }
 
@@ -184,9 +180,7 @@ public class ConfigurationSubscription {
                                  String key,
                                  Object value) {
         if (!viewConfig.containsKey(key) || !viewConfig.getProperty(key).equals(value)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Setting property, key={} value={}", key, fileConfig.getProperty(key));
-            }
+            LOG.debug("Setting property, key={} value={}", key, fileConfig.getProperty(key));
             viewConfig.setProperty(key, fileConfig.getProperty(key));
         }
     }

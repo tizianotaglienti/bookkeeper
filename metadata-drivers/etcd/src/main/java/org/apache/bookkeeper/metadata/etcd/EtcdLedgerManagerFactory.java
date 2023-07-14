@@ -25,12 +25,10 @@ import java.io.IOException;
 import org.apache.bookkeeper.common.net.ServiceURI;
 import org.apache.bookkeeper.conf.AbstractConfiguration;
 import org.apache.bookkeeper.meta.LayoutManager;
-import org.apache.bookkeeper.meta.LedgerAuditorManager;
 import org.apache.bookkeeper.meta.LedgerIdGenerator;
 import org.apache.bookkeeper.meta.LedgerManager;
 import org.apache.bookkeeper.meta.LedgerManagerFactory;
 import org.apache.bookkeeper.meta.LedgerUnderreplicationManager;
-import org.apache.bookkeeper.replication.ReplicationException;
 import org.apache.bookkeeper.replication.ReplicationException.CompatibilityException;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.zookeeper.KeeperException;
@@ -89,12 +87,7 @@ class EtcdLedgerManagerFactory implements LedgerManagerFactory {
 
     @Override
     public LedgerUnderreplicationManager newLedgerUnderreplicationManager()
-        throws ReplicationException.UnavailableException, InterruptedException, CompatibilityException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public LedgerAuditorManager newLedgerAuditorManager() throws IOException, InterruptedException {
+        throws KeeperException, InterruptedException, CompatibilityException {
         throw new UnsupportedOperationException();
     }
 

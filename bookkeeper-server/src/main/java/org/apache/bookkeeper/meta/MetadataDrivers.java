@@ -24,7 +24,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Optional;
@@ -183,13 +182,9 @@ public final class MetadataDrivers {
         MetadataClientDriverInfo newDriverInfo = new MetadataClientDriverInfo(driver);
         oldDriverInfo = clientDrivers.putIfAbsent(scheme, newDriverInfo);
         if (null != oldDriverInfo) {
-            if (log.isDebugEnabled()) {
-                log.debug("Metadata client driver for {} is already there.", scheme);
-            }
+            log.debug("Metadata client driver for {} is already there.", scheme);
             if (allowOverride) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Overriding client driver for {}", scheme);
-                }
+                log.debug("Overriding client driver for {}", scheme);
                 clientDrivers.put(scheme, newDriverInfo);
             }
         }
@@ -218,13 +213,9 @@ public final class MetadataDrivers {
         MetadataBookieDriverInfo newDriverInfo = new MetadataBookieDriverInfo(driver);
         oldDriverInfo = bookieDrivers.putIfAbsent(scheme, newDriverInfo);
         if (null != oldDriverInfo) {
-            if (log.isDebugEnabled()) {
-                log.debug("Metadata bookie driver for {} is already there.", scheme);
-            }
+            log.debug("Metadata bookie driver for {} is already there.", scheme);
             if (allowOverride) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Overriding bookie driver for {}", scheme);
-                }
+                log.debug("Overriding bookie driver for {}", scheme);
                 bookieDrivers.put(scheme, newDriverInfo);
             }
         }
@@ -314,7 +305,6 @@ public final class MetadataDrivers {
      * @throws MetadataException when failed to access metadata store
      * @throws ExecutionException exception thrown when processing <tt>function</tt>.
      */
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     public static <T> T runFunctionWithMetadataClientDriver(ClientConfiguration conf,
                                                             Function<MetadataClientDriver, T> function,
                                                             ScheduledExecutorService executorService)
@@ -346,14 +336,13 @@ public final class MetadataDrivers {
      * @throws MetadataException when failed to access metadata store
      * @throws ExecutionException exception thrown when processing <tt>function</tt>.
      */
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     public static <T> T runFunctionWithMetadataBookieDriver(ServerConfiguration conf,
                                                             Function<MetadataBookieDriver, T> function)
             throws MetadataException, ExecutionException {
         try (MetadataBookieDriver driver = MetadataDrivers.getBookieDriver(
             URI.create(conf.getMetadataServiceUri())
         )) {
-            driver.initialize(conf, NullStatsLogger.INSTANCE);
+            driver.initialize(conf, () -> {}, NullStatsLogger.INSTANCE);
             try {
                 return function.apply(driver);
             } catch (Exception uee) {
@@ -380,12 +369,7 @@ public final class MetadataDrivers {
     public static <T> T runFunctionWithRegistrationManager(ServerConfiguration conf,
                                                            Function<RegistrationManager, T> function)
             throws MetadataException, ExecutionException {
-        return runFunctionWithMetadataBookieDriver(
-                conf, driver -> {
-                    try (RegistrationManager rm = driver.createRegistrationManager()) {
-                        return function.apply(rm);
-                    }
-                });
+        return runFunctionWithMetadataBookieDriver(conf, driver -> function.apply(driver.getRegistrationManager()));
     }
 
     /**

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,18 +17,23 @@
  */
 package org.apache.bookkeeper.proto;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
+
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieException;
-import org.apache.bookkeeper.common.concurrent.FutureEventListener;
 import org.apache.bookkeeper.proto.BookieProtocol.ReadRequest;
 import org.apache.bookkeeper.stats.OpStatsLogger;
 import org.apache.bookkeeper.util.MathUtils;
@@ -43,15 +48,14 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
     private boolean throttleReadResponses;
 
     public static ReadEntryProcessor create(ReadRequest request,
-                                            BookieRequestHandler requestHandler,
+                                            Channel channel,
                                             BookieRequestProcessor requestProcessor,
                                             ExecutorService fenceThreadPool,
                                             boolean throttleReadResponses) {
         ReadEntryProcessor rep = RECYCLER.get();
-        rep.init(request, requestHandler, requestProcessor);
+        rep.init(request, channel, requestProcessor);
         rep.fenceThreadPool = fenceThreadPool;
         rep.throttleReadResponses = throttleReadResponses;
-        requestProcessor.onReadRequestStart(requestHandler.ctx().channel());
         return rep;
     }
 
@@ -60,22 +64,13 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Received new read request: {}", request);
         }
-        if (!requestHandler.ctx().channel().isOpen()) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Dropping read request for closed channel: {}", requestHandler.ctx().channel());
-            }
-            requestProcessor.onReadRequestFinish();
-            recycle();
-            return;
-        }
         int errorCode = BookieProtocol.EOK;
         long startTimeNanos = MathUtils.nowInNano();
         ByteBuf data = null;
         try {
-            CompletableFuture<Boolean> fenceResult = null;
+            SettableFuture<Boolean> fenceResult = null;
             if (request.isFencing()) {
-                LOG.warn("Ledger: {}  fenced by: {}", request.getLedgerId(),
-                        requestHandler.ctx().channel().remoteAddress());
+                LOG.warn("Ledger: {}  fenced by: {}", request.getLedgerId(), channel.remoteAddress());
 
                 if (request.hasMasterKey()) {
                     fenceResult = requestProcessor.getBookie().fenceLedger(request.getLedgerId(),
@@ -108,9 +103,6 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
                 LOG.debug("Error reading {}", request, e);
             }
             errorCode = BookieProtocol.EIO;
-        } catch (BookieException.DataUnknownException e) {
-            LOG.error("Ledger {} is in an unknown state", request.getLedgerId(), e);
-            errorCode = BookieProtocol.EUNKNOWNLEDGERSTATE;
         } catch (BookieException e) {
             LOG.error("Unauthorized access to ledger {}", request.getLedgerId(), e);
             errorCode = BookieProtocol.EUA;
@@ -141,7 +133,11 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
             response = ResponseBuilder.buildErrorResponse(errorCode, request);
         }
 
-        sendReadReqResponse(errorCode, response, stats.getReadRequestStats(), throttleReadResponses);
+        if (throttleReadResponses) {
+            sendResponseAndWait(errorCode, response, stats.getReadRequestStats());
+        } else {
+            sendResponse(errorCode, response, stats.getReadRequestStats());
+        }
         recycle();
     }
 
@@ -150,11 +146,11 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
         sendResponse(data, retCode, startTimeNanos);
     }
 
-    private void handleReadResultForFenceRead(CompletableFuture<Boolean> fenceResult,
+    private void handleReadResultForFenceRead(ListenableFuture<Boolean> fenceResult,
                                               ByteBuf data,
                                               long startTimeNanos) {
         if (null != fenceThreadPool) {
-            fenceResult.whenCompleteAsync(new FutureEventListener<Boolean>() {
+            Futures.addCallback(fenceResult, new FutureCallback<Boolean>() {
                 @Override
                 public void onSuccess(Boolean result) {
                     sendFenceResponse(result, data, startTimeNanos);
@@ -190,7 +186,6 @@ class ReadEntryProcessor extends PacketProcessorBase<ReadRequest> {
     }
 
     private void recycle() {
-        request.recycle();
         super.reset();
         this.recyclerHandle.recycle(this);
     }

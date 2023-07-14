@@ -26,6 +26,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -40,6 +41,7 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
+
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.zookeeper.server.auth.KerberosName;
 import org.slf4j.LoggerFactory;
@@ -76,7 +78,8 @@ public class SaslServerState {
 
                 final String servicePrincipalNameAndHostname = servicePrincipal.getName();
                 int indexOf = servicePrincipalNameAndHostname.indexOf("/");
-                final String serviceHostnameAndKerbDomain = servicePrincipalNameAndHostname.substring(indexOf + 1);
+                final String serviceHostnameAndKerbDomain = servicePrincipalNameAndHostname.substring(indexOf + 1,
+                    servicePrincipalNameAndHostname.length());
                 int indexOfAt = serviceHostnameAndKerbDomain.indexOf("@");
 
                 final String servicePrincipalName, serviceHostname;

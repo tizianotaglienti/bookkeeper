@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,6 @@
  */
 package org.apache.bookkeeper.net;
 
-import com.google.common.base.Strings;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,6 +26,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +45,6 @@ public class NetworkTopologyImpl implements NetworkTopology {
     public static final int DEFAULT_HOST_LEVEL = 2;
     public static final Logger LOG = LoggerFactory.getLogger(NetworkTopologyImpl.class);
     public static final String NODE_SEPARATOR = ",";
-    public static final String INVERSE = "~";
 
     /**
      * A marker for an InvalidTopology Exception.
@@ -120,10 +119,9 @@ public class NetworkTopologyImpl implements NetworkTopology {
          * @return true if this node is an ancestor of <i>n</i>
          */
         boolean isAncestor(Node n) {
-            return !Strings.isNullOrEmpty(n.getNetworkLocation())
-                && (getPath(this).equals(NodeBase.PATH_SEPARATOR_STR)
+            return getPath(this).equals(NodeBase.PATH_SEPARATOR_STR)
                     || (n.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR).startsWith(getPath(this)
-                            + NodeBase.PATH_SEPARATOR_STR));
+                            + NodeBase.PATH_SEPARATOR_STR);
         }
 
         /**
@@ -421,7 +419,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
             Node rack = getNodeForNetworkLocation(node);
             if (rack != null && !(rack instanceof InnerNode)) {
                 LOG.error("Unexpected data node {} at an illegal network location", node);
-                throw new IllegalArgumentException("Unexpected data node " + node
+                throw new IllegalArgumentException("Unexpected data node " + node.toString()
                         + " at an illegal network location");
             }
             if (clusterMap.add(node)) {
@@ -436,7 +434,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
                 }
             }
             if (LOG.isDebugEnabled()) {
-                LOG.debug("NetworkTopology became:\n" + this);
+                LOG.debug("NetworkTopology became:\n" + this.toString());
             }
         } finally {
             netlock.writeLock().unlock();
@@ -507,7 +505,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
                 }
             }
             if (LOG.isDebugEnabled()) {
-                LOG.debug("NetworkTopology became:\n" + this);
+                LOG.debug("NetworkTopology became:\n" + this.toString());
             }
         } finally {
             netlock.writeLock().unlock();
@@ -709,7 +707,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
     public Node chooseRandom(String scope) {
         netlock.readLock().lock();
         try {
-            if (scope.startsWith(INVERSE)) {
+            if (scope.startsWith("~")) {
                 return chooseRandom(NodeBase.ROOT, scope.substring(1));
             } else {
                 return chooseRandom(scope, null);
@@ -775,7 +773,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
     public Set<Node> getLeaves(String scope) {
         netlock.readLock().lock();
         try {
-            if (scope.startsWith(INVERSE)) {
+            if (scope.startsWith("~")) {
                 Set<Node> allNodes = doGetLeaves(NodeBase.ROOT);
                 String[] excludeScopes = scope.substring(1).split(NODE_SEPARATOR);
                 Set<Node> excludeNodes = new HashSet<Node>();
@@ -795,7 +793,7 @@ public class NetworkTopologyImpl implements NetworkTopology {
     @Override
     public int countNumOfAvailableNodes(String scope, Collection<Node> excludedNodes) {
         boolean isExcluded = false;
-        if (scope.startsWith(INVERSE)) {
+        if (scope.startsWith("~")) {
             isExcluded = true;
             scope = scope.substring(1);
         }

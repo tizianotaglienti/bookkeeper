@@ -24,14 +24,14 @@ package org.apache.bookkeeper.bookie;
 import com.google.common.util.concurrent.RateLimiter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.PrimitiveIterator;
+
 import org.apache.bookkeeper.bookie.CheckpointSource.Checkpoint;
 import org.apache.bookkeeper.common.util.Watcher;
 import org.apache.bookkeeper.conf.ServerConfiguration;
@@ -54,13 +54,12 @@ public interface LedgerStorage {
                     LedgerManager ledgerManager,
                     LedgerDirsManager ledgerDirsManager,
                     LedgerDirsManager indexDirsManager,
+                    StateManager stateManager,
+                    CheckpointSource checkpointSource,
+                    Checkpointer checkpointer,
                     StatsLogger statsLogger,
                     ByteBufAllocator allocator)
             throws IOException;
-
-    void setStateManager(StateManager stateManager);
-    void setCheckpointSource(CheckpointSource checkpointSource);
-    void setCheckpointer(Checkpointer checkpointer);
 
     /**
      * Start any background threads belonging to the storage system. For example, garbage collection.
@@ -78,11 +77,6 @@ public interface LedgerStorage {
     boolean ledgerExists(long ledgerId) throws IOException;
 
     /**
-     * Whether an entry exists.
-     */
-    boolean entryExists(long ledgerId, long entryId) throws IOException, BookieException;
-
-    /**
      * Fenced the ledger id in ledger storage.
      *
      * @param ledgerId Ledger Id.
@@ -96,28 +90,7 @@ public interface LedgerStorage {
      * @param ledgerId Ledger ID.
      * @throws IOException
      */
-    boolean isFenced(long ledgerId) throws IOException, BookieException;
-
-    /**
-     * Set a ledger to limbo state.
-     * When a ledger is in limbo state, we cannot answer any requests about it.
-     * For example, if a client asks for an entry, we cannot say we don't have it because
-     * it may have been written to us in the past, but we are waiting for data integrity checks
-     * to copy it over.
-     */
-    void setLimboState(long ledgerId) throws IOException;
-
-    /**
-     * Check whether a ledger is in limbo state.
-     * @see #setLimboState(long)
-     */
-    boolean hasLimboState(long ledgerId) throws IOException;
-
-    /**
-     * Clear the limbo state of a ledger.
-     * @see #setLimboState(long)
-     */
-    void clearLimboState(long ledgerId) throws IOException;
+    boolean isFenced(long ledgerId) throws IOException;
 
     /**
      * Set the master key for a ledger.
@@ -142,7 +115,7 @@ public interface LedgerStorage {
     /**
      * Read an entry from storage.
      */
-    ByteBuf getEntry(long ledgerId, long entryId) throws IOException, BookieException;
+    ByteBuf getEntry(long ledgerId, long entryId) throws IOException;
 
     /**
      * Get last add confirmed.
@@ -151,7 +124,7 @@ public interface LedgerStorage {
      * @return last add confirmed.
      * @throws IOException
      */
-    long getLastAddConfirmed(long ledgerId) throws IOException, BookieException;
+    long getLastAddConfirmed(long ledgerId) throws IOException;
 
     /**
      * Wait for last add confirmed update.
@@ -215,7 +188,7 @@ public interface LedgerStorage {
 
     void setExplicitLac(long ledgerId, ByteBuf lac) throws IOException;
 
-    ByteBuf getExplicitLac(long ledgerId) throws IOException, BookieException;
+    ByteBuf getExplicitLac(long ledgerId) throws IOException;
 
     // for testability
     default LedgerStorage getUnderlyingLedgerStorage() {
@@ -227,57 +200,6 @@ public interface LedgerStorage {
      */
     default void forceGC() {
         return;
-    }
-
-    /**
-     * Force trigger Garbage Collection with forceMajor or forceMinor parameter.
-     */
-    default void forceGC(boolean forceMajor, boolean forceMinor) {
-        return;
-    }
-
-    default void suspendMinorGC() {
-        return;
-    }
-
-    default void suspendMajorGC() {
-        return;
-    }
-
-    default void resumeMinorGC() {
-        return;
-    }
-
-    default void resumeMajorGC() {
-        return;
-    }
-
-    default boolean isMajorGcSuspended() {
-        return false;
-    }
-
-    default boolean isMinorGcSuspended() {
-        return false;
-    }
-
-    default void entryLocationCompact() {
-        return;
-    }
-
-    default void entryLocationCompact(List<String> locations) {
-        return;
-    }
-
-    default boolean isEntryLocationCompacting() {
-        return false;
-    }
-
-    default Map<String, Boolean> isEntryLocationCompacting(List<String> locations) {
-        return Collections.emptyMap();
-    }
-
-    default List<String> getEntryLocationDBPath() {
-        return Collections.emptyList();
     }
 
     /**
@@ -353,30 +275,4 @@ public interface LedgerStorage {
      * @throws Exception
      */
     PrimitiveIterator.OfLong getListOfEntriesOfLedger(long ledgerId) throws IOException;
-
-    /**
-     * Get the storage state flags currently set for the storage instance.
-     */
-    EnumSet<StorageState> getStorageStateFlags() throws IOException;
-
-    /**
-     * Set a storage state flag for the storage instance.
-     * Implementations must ensure this method is atomic, and the flag
-     * is persisted to storage when the method returns.
-     */
-    void setStorageStateFlag(StorageState flags) throws IOException;
-
-    /**
-     * Clear a storage state flag for the storage instance.
-     * Implementations must ensure this method is atomic, and the flag
-     * is persisted to storage when the method returns.
-     */
-    void clearStorageStateFlag(StorageState flags) throws IOException;
-
-    /**
-     * StorageState flags.
-     */
-    enum StorageState {
-        NEEDS_INTEGRITY_CHECK
-    }
 }

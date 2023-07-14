@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -157,14 +157,14 @@ class EnvelopedRecordSetWriter implements LogRecordSet.Writer {
     @Override
     public synchronized void completeTransmit(long lssn, long entryId, long startSlotId) {
         satisfyPromises(lssn, entryId, startSlotId);
-        ReferenceCountUtil.release(buffer);
+        buffer.release();
         ReferenceCountUtil.release(recordSetBuffer);
     }
 
     @Override
     public synchronized void abortTransmit(Throwable reason) {
         cancelPromises(reason);
-        ReferenceCountUtil.release(buffer);
+        buffer.release();
         ReferenceCountUtil.release(recordSetBuffer);
     }
 }

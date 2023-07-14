@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -367,7 +367,7 @@ class BKAsyncLogWriter extends BKAbstractLogWriter implements AsyncLogWriter {
                             FutureUtils.complete(rollingFuture, writer);
                         }
                         rollingFuture = null;
-                        pendingRequestDispatch.addCount(pendingRequests.size());
+                        pendingRequestDispatch.add(pendingRequests.size());
                         pendingRequests = null;
                     }
                 } catch (IOException ioe) {
@@ -395,7 +395,7 @@ class BKAsyncLogWriter extends BKAbstractLogWriter implements AsyncLogWriter {
             rollingFuture = null;
         }
 
-        pendingRequestDispatch.addCount(pendingRequestsSnapshot.size());
+        pendingRequestDispatch.add(pendingRequestsSnapshot.size());
 
         // After erroring out the writer above, no more requests
         // will be enqueued to pendingRequests

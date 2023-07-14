@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import java.util.function.Consumer;
-import org.apache.bookkeeper.common.allocator.ByteBufAllocatorWithOomHandler;
+
 import org.apache.bookkeeper.common.allocator.LeakDetectionPolicy;
 import org.apache.bookkeeper.common.allocator.OutOfMemoryPolicy;
 import org.apache.bookkeeper.common.allocator.PoolingPolicy;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementation of {@link ByteBufAllocator}.
  */
-public class ByteBufAllocatorImpl extends AbstractByteBufAllocator implements ByteBufAllocatorWithOomHandler {
+public class ByteBufAllocatorImpl extends AbstractByteBufAllocator implements ByteBufAllocator {
 
     private static final Logger log = LoggerFactory.getLogger(ByteBufAllocatorImpl.class);
 
@@ -47,7 +47,7 @@ public class ByteBufAllocatorImpl extends AbstractByteBufAllocator implements By
     private final ByteBufAllocator unpooledAllocator;
     private final PoolingPolicy poolingPolicy;
     private final OutOfMemoryPolicy outOfMemoryPolicy;
-    private Consumer<OutOfMemoryError> outOfMemoryListener;
+    private final Consumer<OutOfMemoryError> outOfMemoryListener;
 
     ByteBufAllocatorImpl(ByteBufAllocator pooledAllocator, ByteBufAllocator unpooledAllocator,
             PoolingPolicy poolingPolicy, int poolingConcurrency, OutOfMemoryPolicy outOfMemoryPolicy,
@@ -78,6 +78,7 @@ public class ByteBufAllocatorImpl extends AbstractByteBufAllocator implements By
                             poolingConcurrency /* nDirectArena */,
                             PooledByteBufAllocator.defaultPageSize(),
                             PooledByteBufAllocator.defaultMaxOrder(),
+                            PooledByteBufAllocator.defaultTinyCacheSize(),
                             PooledByteBufAllocator.defaultSmallCacheSize(),
                             PooledByteBufAllocator.defaultNormalCacheSize(),
                             PooledByteBufAllocator.defaultUseCacheForAllThreads());
@@ -190,10 +191,5 @@ public class ByteBufAllocatorImpl extends AbstractByteBufAllocator implements By
     @Override
     public boolean isDirectBufferPooled() {
         return pooledAllocator != null && pooledAllocator.isDirectBufferPooled();
-    }
-
-    @Override
-    public void setOomHandler(Consumer<OutOfMemoryError> handler) {
-        this.outOfMemoryListener = handler;
     }
 }

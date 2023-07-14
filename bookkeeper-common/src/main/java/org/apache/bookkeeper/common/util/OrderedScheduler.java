@@ -22,7 +22,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+
 import io.netty.util.concurrent.DefaultThreadFactory;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,12 +35,20 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 import org.apache.bookkeeper.stats.StatsLogger;
 
 /**
- * This class provides supports submitting tasks with an ordering key, so that tasks submitted
+ * This class provides 2 things over the java {@link ScheduledExecutorService}.
+ *
+ * <p>1. It takes {@link SafeRunnable objects} instead of plain Runnable objects.
+ * This means that exceptions in scheduled tasks wont go unnoticed and will be
+ * logged.
+ *
+ * <p>2. It supports submitting tasks with an ordering key, so that tasks submitted
  * with the same key will always be executed in order, but tasks across
  * different keys can be unordered. This retains parallelism while retaining the
  * basic amount of ordering we want (e.g. , per ledger handle). Ordering is
@@ -73,8 +83,7 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
                 traceTaskExecution,
                 preserveMdcForTaskExecution,
                 warnTimeMicroSec,
-                maxTasksInQueue,
-                enableThreadScopedMetrics);
+                maxTasksInQueue);
         }
     }
 
@@ -103,30 +112,23 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
                                boolean traceTaskExecution,
                                boolean preserveMdcForTaskExecution,
                                long warnTimeMicroSec,
-                               int maxTasksInQueue,
-                               boolean enableThreadScopedMetrics) {
+                               int maxTasksInQueue) {
         super(baseName, numThreads, threadFactory, statsLogger, traceTaskExecution,
-                preserveMdcForTaskExecution, warnTimeMicroSec, maxTasksInQueue,
-                false /* enableBusyWait */, enableThreadScopedMetrics);
+                preserveMdcForTaskExecution, warnTimeMicroSec, maxTasksInQueue, false /* enableBusyWait */);
     }
 
     @Override
-    protected ExecutorService createSingleThreadExecutor(ThreadFactory factory) {
-        return new BoundedScheduledExecutorService(
-                new SingleThreadSafeScheduledExecutorService(factory),
-                this.maxTasksInQueue);
+    protected ScheduledThreadPoolExecutor createSingleThreadExecutor(ThreadFactory factory) {
+        return new ScheduledThreadPoolExecutor(1, factory);
     }
 
     @Override
-    protected ListeningScheduledExecutorService getBoundedExecutor(ExecutorService executor) {
+    protected ListeningScheduledExecutorService getBoundedExecutor(ThreadPoolExecutor executor) {
         return new BoundedScheduledExecutorService((ScheduledThreadPoolExecutor) executor, this.maxTasksInQueue);
     }
 
     @Override
     protected ListeningScheduledExecutorService addExecutorDecorators(ExecutorService executor) {
-        if (!(executor instanceof ListeningScheduledExecutorService)) {
-            executor = new BoundedScheduledExecutorService((ScheduledThreadPoolExecutor) executor, 0);
-        }
         return new OrderedSchedulerDecoratedThread((ListeningScheduledExecutorService) executor);
     }
 
@@ -159,14 +161,27 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
     /**
      * Creates and executes a one-shot action that becomes enabled after the given delay.
      *
-     * @param orderingKey - the key used for ordering
-     * @param command - the Runnable to execute
+     * @param command - the SafeRunnable to execute
      * @param delay - the time from now to delay execution
      * @param unit - the time unit of the delay parameter
      * @return a ScheduledFuture representing pending completion of the task and whose get() method
      *         will return null upon completion
      */
-    public ScheduledFuture<?> scheduleOrdered(Object orderingKey, Runnable command, long delay, TimeUnit unit) {
+    public ScheduledFuture<?> schedule(SafeRunnable command, long delay, TimeUnit unit) {
+        return chooseThread().schedule(timedRunnable(command), delay, unit);
+    }
+
+    /**
+     * Creates and executes a one-shot action that becomes enabled after the given delay.
+     *
+     * @param orderingKey - the key used for ordering
+     * @param command - the SafeRunnable to execute
+     * @param delay - the time from now to delay execution
+     * @param unit - the time unit of the delay parameter
+     * @return a ScheduledFuture representing pending completion of the task and whose get() method
+     *         will return null upon completion
+     */
+    public ScheduledFuture<?> scheduleOrdered(Object orderingKey, SafeRunnable command, long delay, TimeUnit unit) {
         return chooseThread(orderingKey).schedule(command, delay, unit);
     }
 
@@ -176,15 +191,32 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
      *
      * <p>For more details check {@link ScheduledExecutorService#scheduleAtFixedRate(Runnable, long, long, TimeUnit)}.
      *
+     * @param command - the SafeRunnable to execute
+     * @param initialDelay - the time to delay first execution
+     * @param period - the period between successive executions
+     * @param unit - the time unit of the initialDelay and period parameters
+     * @return a ScheduledFuture representing pending completion of the task, and whose get()
+     * method will throw an exception upon cancellation
+     */
+    public ScheduledFuture<?> scheduleAtFixedRate(SafeRunnable command, long initialDelay, long period, TimeUnit unit) {
+        return chooseThread().scheduleAtFixedRate(timedRunnable(command), initialDelay, period, unit);
+    }
+
+    /**
+     * Creates and executes a periodic action that becomes enabled first after
+     * the given initial delay, and subsequently with the given period.
+     *
+     * <p>For more details check {@link ScheduledExecutorService#scheduleAtFixedRate(Runnable, long, long, TimeUnit)}.
+     *
      * @param orderingKey - the key used for ordering
-     * @param command - the Runnable to execute
+     * @param command - the SafeRunnable to execute
      * @param initialDelay - the time to delay first execution
      * @param period - the period between successive executions
      * @param unit - the time unit of the initialDelay and period parameters
      * @return a ScheduledFuture representing pending completion of the task, and whose get() method
      * will throw an exception upon cancellation
      */
-    public ScheduledFuture<?> scheduleAtFixedRateOrdered(Object orderingKey, Runnable command, long initialDelay,
+    public ScheduledFuture<?> scheduleAtFixedRateOrdered(Object orderingKey, SafeRunnable command, long initialDelay,
             long period, TimeUnit unit) {
         return chooseThread(orderingKey).scheduleAtFixedRate(command, initialDelay, period, unit);
     }
@@ -196,15 +228,34 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
      * <p>For more details check {@link ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)}
      * .
      *
-     * @param orderingKey - the key used for ordering
-     * @param command - the Runnable to execute
+     * @param command - the SafeRunnable to execute
      * @param initialDelay - the time to delay first execution
      * @param delay - the delay between the termination of one execution and the commencement of the next
      * @param unit - the time unit of the initialDelay and delay parameters
      * @return a ScheduledFuture representing pending completion of the task, and whose get() method
      * will throw an exception upon cancellation
      */
-    public ScheduledFuture<?> scheduleWithFixedDelayOrdered(Object orderingKey, Runnable command, long initialDelay,
+    public ScheduledFuture<?> scheduleWithFixedDelay(SafeRunnable command, long initialDelay, long delay,
+            TimeUnit unit) {
+        return chooseThread().scheduleWithFixedDelay(timedRunnable(command), initialDelay, delay, unit);
+    }
+
+    /**
+     * Creates and executes a periodic action that becomes enabled first after the given initial delay, and subsequently
+     * with the given delay between the termination of one execution and the commencement of the next.
+     *
+     * <p>For more details check {@link ScheduledExecutorService#scheduleWithFixedDelay(Runnable, long, long, TimeUnit)}
+     * .
+     *
+     * @param orderingKey - the key used for ordering
+     * @param command - the SafeRunnable to execute
+     * @param initialDelay - the time to delay first execution
+     * @param delay - the delay between the termination of one execution and the commencement of the next
+     * @param unit - the time unit of the initialDelay and delay parameters
+     * @return a ScheduledFuture representing pending completion of the task, and whose get() method
+     * will throw an exception upon cancellation
+     */
+    public ScheduledFuture<?> scheduleWithFixedDelayOrdered(Object orderingKey, SafeRunnable command, long initialDelay,
             long delay, TimeUnit unit) {
         return chooseThread(orderingKey).scheduleWithFixedDelay(command, initialDelay, delay, unit);
     }
@@ -219,7 +270,7 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
      */
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return chooseThread().schedule(command, delay, unit);
+        return chooseThread().schedule(timedRunnable(command), delay, unit);
     }
 
     /**
@@ -227,7 +278,7 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
      */
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return chooseThread().schedule(callable, delay, unit);
+        return chooseThread().schedule(timedCallable(callable), delay, unit);
     }
 
     /**
@@ -236,7 +287,7 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
                                                   long initialDelay, long period, TimeUnit unit) {
-        return chooseThread().scheduleAtFixedRate(command, initialDelay, period, unit);
+        return chooseThread().scheduleAtFixedRate(timedRunnable(command), initialDelay, period, unit);
     }
 
     /**
@@ -245,7 +296,7 @@ public class OrderedScheduler extends OrderedExecutor implements ScheduledExecut
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
                                                      long initialDelay, long delay, TimeUnit unit) {
-        return chooseThread().scheduleWithFixedDelay(command, initialDelay, delay, unit);
+        return chooseThread().scheduleWithFixedDelay(timedRunnable(command), initialDelay, delay, unit);
     }
 
     class OrderedSchedulerDecoratedThread extends ForwardingListeningExecutorService

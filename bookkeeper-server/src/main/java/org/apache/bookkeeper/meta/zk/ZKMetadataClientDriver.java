@@ -20,7 +20,9 @@ package org.apache.bookkeeper.meta.zk;
 
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.discover.RegistrationClient;
 import org.apache.bookkeeper.discover.ZKRegistrationClient;
@@ -64,7 +66,7 @@ public class ZKMetadataClientDriver
             new BoundExponentialBackoffRetryPolicy(
                 conf.getZkTimeout(),
                 conf.getZkTimeout(),
-                conf.getZkRetryBackoffMaxRetries()),
+                0),
             optionalCtx);
         this.statsLogger = statsLogger;
         this.clientConf = conf;

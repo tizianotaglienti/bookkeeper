@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TimeBasedRollingPolicy implements RollingPolicy {
     public boolean shouldRollover(Sizable sizable, long lastRolloverTimeMs) {
         long elapsedMs = Utils.elapsedMSec(lastRolloverTimeMs);
         boolean shouldSwitch = elapsedMs > rollingIntervalMs;
-        if (shouldSwitch && LOG.isDebugEnabled()) {
+        if (shouldSwitch) {
             LOG.debug("Last Finalize Time: {} elapsed time (MSec): {}", lastRolloverTimeMs,
                       elapsedMs);
         }

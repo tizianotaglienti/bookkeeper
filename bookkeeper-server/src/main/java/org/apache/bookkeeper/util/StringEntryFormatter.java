@@ -22,6 +22,7 @@
 package org.apache.bookkeeper.util;
 
 import com.google.protobuf.ByteString;
+
 import java.io.IOException;
 
 /**

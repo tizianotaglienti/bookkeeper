@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,14 +24,15 @@ import static org.apache.bookkeeper.replication.ReplicationStats.AUDITOR_SCOPE;
 import static org.apache.bookkeeper.replication.ReplicationStats.REPLICATION_WORKER_SCOPE;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.MalformedURLException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieCriticalThread;
-import org.apache.bookkeeper.bookie.BookieImpl;
 import org.apache.bookkeeper.bookie.ExitCode;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookKeeper;
@@ -95,15 +96,11 @@ public class AutoRecoveryMain {
         MetadataClientDriver metadataClientDriver = bkc.getMetadataClientDriver();
         metadataClientDriver.setSessionStateListener(() -> {
             LOG.error("Client connection to the Metadata server has expired, so shutting down AutoRecoveryMain!");
-            // do not run "shutdown" in the main ZooKeeper client thread
-            // as it performs some blocking operations
-            CompletableFuture.runAsync(() -> {
-                shutdown(ExitCode.ZK_EXPIRED);
-            });
+            shutdown(ExitCode.ZK_EXPIRED);
         });
 
         auditorElector = new AuditorElector(
-            BookieImpl.getBookieId(conf).toString(),
+            Bookie.getBookieId(conf).toString(),
             conf,
             bkc,
             statsLogger.scope(AUDITOR_SCOPE),
@@ -189,11 +186,6 @@ public class AutoRecoveryMain {
     @VisibleForTesting
     public Auditor getAuditor() {
         return auditorElector.getAuditor();
-    }
-
-    @VisibleForTesting
-    public ReplicationWorker getReplicationWorker() {
-        return replicationWorker;
     }
 
     /** Is auto-recovery service running? */
@@ -297,14 +289,14 @@ public class AutoRecoveryMain {
 
             if (cmdLine.hasOption('c')) {
                 if (null != leftArgs && leftArgs.length > 0) {
-                    throw new IllegalArgumentException("unexpected arguments [" + String.join(" ", leftArgs) + "]");
+                    throw new IllegalArgumentException();
                 }
                 String confFile = cmdLine.getOptionValue("c");
                 loadConfFile(conf, confFile);
             }
 
             if (null != leftArgs && leftArgs.length > 0) {
-                throw new IllegalArgumentException("unexpected arguments [" + String.join(" ", leftArgs) + "]");
+                throw new IllegalArgumentException();
             }
             return conf;
         } catch (ParseException e) {
@@ -325,11 +317,6 @@ public class AutoRecoveryMain {
         try {
             conf = parseArgs(args);
         } catch (IllegalArgumentException iae) {
-            LOG.error("Error parsing command line arguments : ", iae);
-            if (iae.getMessage() != null) {
-                System.err.println(iae.getMessage());
-            }
-            printUsage();
             return ExitCode.INVALID_CONF;
         }
 

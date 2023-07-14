@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.bookkeeper.tls;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslHandler;
+
 import org.apache.bookkeeper.conf.AbstractConfiguration;
 
 /**
@@ -40,8 +41,4 @@ public interface SecurityHandlerFactory {
     void init(NodeType type, AbstractConfiguration conf, ByteBufAllocator allocator) throws SecurityException;
 
     SslHandler newTLSHandler();
-
-    default SslHandler newTLSHandler(String host, int port) {
-        return this.newTLSHandler();
-    }
 }

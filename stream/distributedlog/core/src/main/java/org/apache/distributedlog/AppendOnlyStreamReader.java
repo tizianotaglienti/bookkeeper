@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +46,8 @@ public class AppendOnlyStreamReader extends InputStream {
         LogRecordWithInputStream(LogRecordWithDLSN logRecord) {
             checkNotNull(logRecord);
 
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Got record dlsn = {}, txid = {}, len = {}",
-                        logRecord.getDlsn(), logRecord.getTransactionId(), logRecord.getPayload().length);
-            }
+            LOG.debug("Got record dlsn = {}, txid = {}, len = {}",
+                logRecord.getDlsn(), logRecord.getTransactionId(), logRecord.getPayload().length);
 
             this.logRecord = logRecord;
             this.payloadStream = logRecord.getPayLoadInputStream();
@@ -102,9 +100,7 @@ public class AppendOnlyStreamReader extends InputStream {
             if (null != record) {
                 return new LogRecordWithInputStream(record);
             } else {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("No record");
-                }
+                LOG.debug("No record");
                 return null;
             }
         }
@@ -138,10 +134,8 @@ public class AppendOnlyStreamReader extends InputStream {
                     return read;
                 }
             } else {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Offset saved = {}, persisted = {}",
-                            currentPosition, currentLogRecord.getLogRecord().getTransactionId());
-                }
+                LOG.debug("Offset saved = {}, persisted = {}",
+                    currentPosition, currentLogRecord.getLogRecord().getTransactionId());
                 currentPosition += thisread;
                 read += thisread;
             }

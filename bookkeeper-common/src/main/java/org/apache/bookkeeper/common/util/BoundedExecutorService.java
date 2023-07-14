@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.bookkeeper.common.util;
 
 import com.google.common.util.concurrent.ForwardingExecutorService;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;

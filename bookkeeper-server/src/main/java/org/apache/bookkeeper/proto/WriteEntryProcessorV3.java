@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,9 +22,12 @@ package org.apache.bookkeeper.proto;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.BookieException;
 import org.apache.bookkeeper.bookie.BookieException.OperationRejectedException;
 import org.apache.bookkeeper.client.api.WriteFlag;
@@ -42,10 +45,10 @@ import org.slf4j.LoggerFactory;
 class WriteEntryProcessorV3 extends PacketProcessorBaseV3 {
     private static final Logger logger = LoggerFactory.getLogger(WriteEntryProcessorV3.class);
 
-    public WriteEntryProcessorV3(Request request, BookieRequestHandler requestHandler,
+    public WriteEntryProcessorV3(Request request, Channel channel,
                                  BookieRequestProcessor requestProcessor) {
-        super(request, requestHandler, requestProcessor);
-        requestProcessor.onAddRequestStart(requestHandler.ctx().channel());
+        super(request, channel, requestProcessor);
+        requestProcessor.onAddRequestStart(channel);
     }
 
     // Returns null if there is no exception thrown
@@ -117,21 +120,18 @@ class WriteEntryProcessorV3 extends PacketProcessorBaseV3 {
         ByteBuf entryToAdd = Unpooled.wrappedBuffer(addRequest.getBody().asReadOnlyByteBuffer());
         try {
             if (RequestUtils.hasFlag(addRequest, AddRequest.Flag.RECOVERY_ADD)) {
-                requestProcessor.getBookie().recoveryAddEntry(entryToAdd, wcb,
-                        requestHandler.ctx().channel(), masterKey);
+                requestProcessor.getBookie().recoveryAddEntry(entryToAdd, wcb, channel, masterKey);
             } else {
-                requestProcessor.getBookie().addEntry(entryToAdd, ackBeforeSync, wcb,
-                        requestHandler.ctx().channel(), masterKey);
+                requestProcessor.getBookie().addEntry(entryToAdd, ackBeforeSync, wcb, channel, masterKey);
             }
             status = StatusCode.EOK;
         } catch (OperationRejectedException e) {
-            requestProcessor.getRequestStats().getAddEntryRejectedCounter().inc();
             // Avoid to log each occurence of this exception as this can happen when the ledger storage is
             // unable to keep up with the write rate.
             if (logger.isDebugEnabled()) {
                 logger.debug("Operation rejected while writing {}", request, e);
             }
-            status = StatusCode.ETOOMANYREQUESTS;
+            status = StatusCode.EIO;
         } catch (IOException e) {
             logger.error("Error writing entry:{} to ledger:{}",
                     entryId, ledgerId, e);
@@ -161,9 +161,7 @@ class WriteEntryProcessorV3 extends PacketProcessorBaseV3 {
     }
 
     @Override
-    public void run() {
-        requestProcessor.getRequestStats().getWriteThreadQueuedLatency()
-                .registerSuccessfulEvent(MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
+    public void safeRun() {
         AddResponse addResponse = getAddResponse();
         if (null != addResponse) {
             // This means there was an error and we should send this back.

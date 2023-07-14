@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -237,9 +237,7 @@ public class PerStreamLogSegmentCache {
             LogSegmentMetadata metadata = logSegments.remove(name);
             if (null != metadata) {
                 lid2LogSegments.remove(metadata.getLogSegmentId(), metadata);
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Removed log segment ({} : {}) from cache.", name, metadata);
-                }
+                LOG.debug("Removed log segment ({} : {}) from cache.", name, metadata);
             }
             return metadata;
         }

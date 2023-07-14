@@ -37,6 +37,7 @@ import static org.apache.bookkeeper.metadata.etcd.EtcdUtils.msResult;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
@@ -56,6 +57,7 @@ import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchEvent.EventType;
+
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -112,8 +114,9 @@ class EtcdRegistrationManager implements RegistrationManager {
             scope,
             new EtcdBookieRegister(
                 client.getLeaseClient(),
-                ttlSeconds
-            ).addRegistrationListener(listener).start(),
+                ttlSeconds,
+                listener
+            ).start(),
             true);
     }
 
@@ -518,11 +521,6 @@ class EtcdRegistrationManager implements RegistrationManager {
     @Override
     public boolean nukeExistingCluster() throws Exception {
         return nukeExistingCluster(kvClient, scope);
-    }
-
-    @Override
-    public void addRegistrationListener(RegistrationListener listener) {
-        bkRegister.addRegistrationListener(listener);
     }
 
     static boolean nukeExistingCluster(KV kvClient, String scope) throws Exception {

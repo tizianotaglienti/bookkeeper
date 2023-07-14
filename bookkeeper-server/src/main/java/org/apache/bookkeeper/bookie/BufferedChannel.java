@@ -24,6 +24,7 @@ package org.apache.bookkeeper.bookie;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,21 +35,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * Provides a buffering layer in front of a FileChannel.
  */
 public class BufferedChannel extends BufferedReadChannel implements Closeable {
-    /**
-     * The capacity of the write buffer.
-     */
+    // The capacity of the write buffer.
     protected final int writeCapacity;
-    /**
-     * The position of the file channel's write pointer.
-     */
+    // The position of the file channel's write pointer.
     protected AtomicLong writeBufferStartPosition = new AtomicLong(0);
-    /**
-     * The buffer used to write operations.
-     */
+    // The buffer used to write operations.
     protected final ByteBuf writeBuffer;
-    /**
-     * The absolute position of the next write operation.
-     */
+    // The absolute position of the next write operation.
     protected volatile long position;
 
     /*
@@ -101,7 +94,7 @@ public class BufferedChannel extends BufferedReadChannel implements Closeable {
         if (closed) {
             return;
         }
-        ReferenceCountUtil.release(writeBuffer);
+        ReferenceCountUtil.safeRelease(writeBuffer);
         fileChannel.close();
         closed = true;
     }
@@ -204,11 +197,8 @@ public class BufferedChannel extends BufferedReadChannel implements Closeable {
         writeBufferStartPosition.set(fileChannel.position());
     }
 
-    /**
+    /*
      * force a sync operation so that data is persisted to the disk.
-     * @param forceMetadata
-     * @return
-     * @throws IOException
      */
     public long forceWrite(boolean forceMetadata) throws IOException {
         // This is the point up to which we had flushed to the file system page cache

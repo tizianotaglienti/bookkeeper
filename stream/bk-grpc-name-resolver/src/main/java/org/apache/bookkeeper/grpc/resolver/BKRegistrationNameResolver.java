@@ -34,13 +34,11 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
-import org.apache.bookkeeper.client.BookieAddressResolverDisabled;
 import org.apache.bookkeeper.client.DefaultBookieAddressResolver;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.meta.MetadataClientDriver;
 import org.apache.bookkeeper.meta.exceptions.MetadataException;
 import org.apache.bookkeeper.net.BookieId;
-import org.apache.bookkeeper.proto.BookieAddressResolver;
 import org.apache.bookkeeper.stats.NullStatsLogger;
 
 /**
@@ -55,7 +53,7 @@ class BKRegistrationNameResolver extends NameResolver {
     private Listener listener;
     private boolean shutdown;
     private boolean resolving;
-    private BookieAddressResolver bookieAddressResolver;
+    private DefaultBookieAddressResolver bookieAddressResolver;
 
     BKRegistrationNameResolver(MetadataClientDriver clientDriver,
                                URI serviceURI) {
@@ -83,9 +81,7 @@ class BKRegistrationNameResolver extends NameResolver {
         } catch (MetadataException e) {
             throw new RuntimeException("Failed to initialize registration client driver at " + serviceURI, e);
         }
-        this.bookieAddressResolver = conf.getBookieAddressResolverEnabled()
-                ? new DefaultBookieAddressResolver(clientDriver.getRegistrationClient())
-                : new BookieAddressResolverDisabled();
+        this.bookieAddressResolver = new DefaultBookieAddressResolver(clientDriver.getRegistrationClient());
 
         resolve();
     }

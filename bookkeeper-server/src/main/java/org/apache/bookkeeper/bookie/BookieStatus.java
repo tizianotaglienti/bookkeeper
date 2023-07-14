@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -199,16 +199,12 @@ public class BookieStatus {
         BookieStatus status = new BookieStatus();
         String line = reader.readLine();
         if (line == null || line.trim().isEmpty()) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Empty line when parsing bookie status");
-            }
+            LOG.debug("Empty line when parsing bookie status");
             return null;
         }
         String[] parts = line.split(",");
         if (parts.length == 0) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error in parsing bookie status: {}", line);
-            }
+            LOG.debug("Error in parsing bookie status: {}", line);
             return null;
         }
         synchronized (status) {

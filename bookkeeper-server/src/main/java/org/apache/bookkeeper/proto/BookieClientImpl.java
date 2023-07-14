@@ -21,9 +21,11 @@
 package org.apache.bookkeeper.proto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.bookkeeper.util.SafeRunnable.safeRun;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ExtensionRegistry;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -31,9 +33,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
-import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultThreadFactory;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -45,12 +46,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.bookkeeper.auth.AuthProviderFactoryFactory;
 import org.apache.bookkeeper.auth.ClientAuthProvider;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.BookieInfoReader.BookieInfo;
 import org.apache.bookkeeper.client.api.WriteFlag;
 import org.apache.bookkeeper.common.util.OrderedExecutor;
+import org.apache.bookkeeper.common.util.SafeRunnable;
 import org.apache.bookkeeper.conf.ClientConfiguration;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.net.BookieSocketAddress;
@@ -124,11 +127,13 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
 
         this.scheduler = scheduler;
         if (conf.getAddEntryTimeout() > 0 || conf.getReadEntryTimeout() > 0) {
-            this.timeoutFuture = this.scheduler.scheduleAtFixedRate(
-                    () -> monitorPendingOperations(),
-                    conf.getTimeoutMonitorIntervalSec(),
-                    conf.getTimeoutMonitorIntervalSec(),
-                    TimeUnit.SECONDS);
+            SafeRunnable monitor = safeRun(() -> {
+                monitorPendingOperations();
+            });
+            this.timeoutFuture = this.scheduler.scheduleAtFixedRate(monitor,
+                                                                    conf.getTimeoutMonitorIntervalSec(),
+                                                                    conf.getTimeoutMonitorIntervalSec(),
+                                                                    TimeUnit.SECONDS);
         } else {
             this.timeoutFuture = null;
         }
@@ -237,8 +242,9 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         client.obtain((rc, pcbc) -> {
             if (rc != BKException.Code.OK) {
                 try {
-                    executor.executeOrdered(ledgerId,
-                            () -> cb.forceLedgerComplete(rc, ledgerId, addr, ctx));
+                    executor.executeOrdered(ledgerId, safeRun(() -> {
+                        cb.forceLedgerComplete(rc, ledgerId, addr, ctx);
+                    }));
                 } catch (RejectedExecutionException re) {
                     cb.forceLedgerComplete(getRc(BKException.Code.InterruptedException), ledgerId, addr, ctx);
                 }
@@ -262,8 +268,9 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         client.obtain((rc, pcbc) -> {
             if (rc != BKException.Code.OK) {
                 try {
-                    executor.executeOrdered(ledgerId,
-                            () -> cb.writeLacComplete(rc, ledgerId, addr, ctx));
+                    executor.executeOrdered(ledgerId, safeRun(() -> {
+                        cb.writeLacComplete(rc, ledgerId, addr, ctx);
+                    }));
                 } catch (RejectedExecutionException re) {
                     cb.writeLacComplete(getRc(BKException.Code.InterruptedException), ledgerId, addr, ctx);
                 }
@@ -271,7 +278,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
                 pcbc.writeLac(ledgerId, masterKey, lac, toSend, cb, ctx);
             }
 
-            ReferenceCountUtil.release(toSend);
+            toSend.release();
         }, ledgerId, useV3Enforced);
     }
 
@@ -281,7 +288,20 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
                              final BookieId addr,
                              final WriteCallback cb,
                              final Object ctx) {
-        cb.writeComplete(rc, ledgerId, entryId, addr, ctx);
+        try {
+            executor.executeOrdered(ledgerId, new SafeRunnable() {
+                @Override
+                public void safeRun() {
+                    cb.writeComplete(rc, ledgerId, entryId, addr, ctx);
+                }
+                @Override
+                public String toString() {
+                    return String.format("CompleteWrite(ledgerId=%d, entryId=%d, addr=%s)", ledgerId, entryId, addr);
+                }
+            });
+        } catch (RejectedExecutionException ree) {
+            cb.writeComplete(getRc(BKException.Code.InterruptedException), ledgerId, entryId, addr, ctx);
+        }
     }
 
     @Override
@@ -289,7 +309,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
                          final long ledgerId,
                          final byte[] masterKey,
                          final long entryId,
-                         final ReferenceCounted toSend,
+                         final ByteBufList toSend,
                          final WriteCallback cb,
                          final Object ctx,
                          final int options,
@@ -325,9 +345,9 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         client.obtain((rc, pcbc) -> {
             if (rc != BKException.Code.OK) {
                 try {
-                    executor.executeOrdered(ledgerId, () ->
-                            futureResult.getListOfEntriesOfLedgerComplete(rc, ledgerId, null)
-                    );
+                    executor.executeOrdered(ledgerId, safeRun(() -> {
+                        futureResult.getListOfEntriesOfLedgerComplete(rc, ledgerId, null);
+                    }));
                 } catch (RejectedExecutionException re) {
                     futureResult.getListOfEntriesOfLedgerComplete(getRc(BKException.Code.InterruptedException),
                             ledgerId, null);
@@ -346,7 +366,12 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
                               final ReadEntryCallback cb,
                               final Object ctx) {
         try {
-            executor.executeOrdered(ledgerId, () -> cb.readEntryComplete(rc, ledgerId, entryId, entry, ctx));
+            executor.executeOrdered(ledgerId, new SafeRunnable() {
+                @Override
+                public void safeRun() {
+                    cb.readEntryComplete(rc, ledgerId, entryId, entry, ctx);
+                }
+            });
         } catch (RejectedExecutionException ree) {
             cb.readEntryComplete(getRc(BKException.Code.InterruptedException),
                                  ledgerId, entryId, entry, ctx);
@@ -358,7 +383,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         private final Handle<ChannelReadyForAddEntryCallback> recyclerHandle;
 
         private BookieClientImpl bookieClient;
-        private ReferenceCounted toSend;
+        private ByteBufList toSend;
         private long ledgerId;
         private long entryId;
         private BookieId addr;
@@ -370,7 +395,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         private EnumSet<WriteFlag> writeFlags;
 
         static ChannelReadyForAddEntryCallback create(
-                BookieClientImpl bookieClient, ReferenceCounted toSend, long ledgerId,
+                BookieClientImpl bookieClient, ByteBufList toSend, long ledgerId,
                 long entryId, BookieId addr, Object ctx,
                 WriteCallback cb, int options, byte[] masterKey, boolean allowFastFail,
                 EnumSet<WriteFlag> writeFlags) {
@@ -399,7 +424,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
                               toSend, cb, ctx, options, allowFastFail, writeFlags);
             }
 
-            ReferenceCountUtil.release(toSend);
+            toSend.release();
             recycle();
         }
 
@@ -445,8 +470,9 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         client.obtain((rc, pcbc) -> {
             if (rc != BKException.Code.OK) {
                 try {
-                    executor.executeOrdered(ledgerId,
-                            () -> cb.readLacComplete(rc, ledgerId, null, null, ctx));
+                    executor.executeOrdered(ledgerId, safeRun(() -> {
+                        cb.readLacComplete(rc, ledgerId, null, null, ctx);
+                    }));
                 } catch (RejectedExecutionException re) {
                     cb.readLacComplete(getRc(BKException.Code.InterruptedException),
                             ledgerId, null, null, ctx);
@@ -528,7 +554,9 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         client.obtain((rc, pcbc) -> {
             if (rc != BKException.Code.OK) {
                 try {
-                    executor.execute(() -> cb.getBookieInfoComplete(rc, new BookieInfo(), ctx));
+                    executor.submit(safeRun(() -> {
+                        cb.getBookieInfoComplete(rc, new BookieInfo(), ctx);
+                    }));
                 } catch (RejectedExecutionException re) {
                     cb.getBookieInfoComplete(getRc(BKException.Code.InterruptedException),
                             new BookieInfo(), ctx);
@@ -627,7 +655,7 @@ public class BookieClientImpl implements BookieClient, PerChannelBookieClientFac
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
                 new DefaultThreadFactory("BookKeeperClientScheduler"));
         BookieClientImpl bc = new BookieClientImpl(new ClientConfiguration(), eventLoopGroup,
-                null, executor, scheduler, NullStatsLogger.INSTANCE, BookieSocketAddress.LEGACY_BOOKIEID_RESOLVER);
+                null, executor, scheduler, NullStatsLogger.INSTANCE, b -> BookieSocketAddress.class.cast(b));
         BookieId addr = new BookieSocketAddress(args[0], Integer.parseInt(args[1])).toBookieId();
 
         for (int i = 0; i < 100000; i++) {

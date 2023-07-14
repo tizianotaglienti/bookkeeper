@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,18 +21,20 @@
 package org.apache.bookkeeper.bookie.storage.ldb;
 
 import com.google.common.collect.Iterables;
+
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.EntryLocation;
 import org.apache.bookkeeper.bookie.storage.ldb.KeyValueStorage.Batch;
 import org.apache.bookkeeper.bookie.storage.ldb.KeyValueStorageFactory.DbConfigType;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.stats.StatsLogger;
-import org.apache.bookkeeper.util.MathUtils;
 import org.apache.bookkeeper.util.collections.ConcurrentLongHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,13 +48,14 @@ import org.slf4j.LoggerFactory;
 public class EntryLocationIndex implements Closeable {
 
     private final KeyValueStorage locationsDb;
-    private final ConcurrentLongHashSet deletedLedgers = ConcurrentLongHashSet.newBuilder().build();
+    private final ConcurrentLongHashSet deletedLedgers = new ConcurrentLongHashSet();
+
     private final EntryLocationIndexStats stats;
-    private boolean isCompacting;
 
     public EntryLocationIndex(ServerConfiguration conf, KeyValueStorageFactory storageFactory, String basePath,
             StatsLogger stats) throws IOException {
-        locationsDb = storageFactory.newKeyValueStorage(basePath, "locations", DbConfigType.EntryLocation, conf);
+        String locationsDbPath = FileSystems.getDefault().getPath(basePath, "locations").toFile().toString();
+        locationsDb = storageFactory.newKeyValueStorage(locationsDbPath, DbConfigType.Huge, conf);
 
         this.stats = new EntryLocationIndexStats(
             stats,
@@ -74,8 +77,6 @@ public class EntryLocationIndex implements Closeable {
         LongPairWrapper key = LongPairWrapper.get(ledgerId, entryId);
         LongWrapper value = LongWrapper.get();
 
-        long startTimeNanos = MathUtils.nowInNano();
-        boolean operationSuccess = false;
         try {
             if (locationsDb.get(key.array, value.array) < 0) {
                 if (log.isDebugEnabled()) {
@@ -83,34 +84,20 @@ public class EntryLocationIndex implements Closeable {
                 }
                 return 0;
             }
-            operationSuccess = true;
+
             return value.getValue();
         } finally {
             key.recycle();
             value.recycle();
-            if (operationSuccess) {
-                stats.getLookupEntryLocationStats()
-                        .registerSuccessfulEvent(MathUtils.elapsedNanos(startTimeNanos), TimeUnit.NANOSECONDS);
-            } else {
-                stats.getLookupEntryLocationStats()
-                        .registerFailedEvent(MathUtils.elapsedNanos(startTimeNanos), TimeUnit.NANOSECONDS);
-            }
         }
     }
 
     public long getLastEntryInLedger(long ledgerId) throws IOException {
         if (deletedLedgers.contains(ledgerId)) {
             // Ledger already deleted
-            if (log.isDebugEnabled()) {
-                log.debug("Ledger {} already deleted in db", ledgerId);
-            }
-            /**
-             * when Ledger already deleted,
-             * throw Bookie.NoEntryException same like  the method
-             * {@link EntryLocationIndex.getLastEntryInLedgerInternal} solving ledgerId is not found.
-             * */
-            throw new Bookie.NoEntryException(ledgerId, -1);
+            return -1;
         }
+
         return getLastEntryInLedgerInternal(ledgerId);
     }
 
@@ -190,37 +177,27 @@ public class EntryLocationIndex implements Closeable {
         deletedLedgers.add(ledgerId);
     }
 
-    public String getEntryLocationDBPath() {
-        return locationsDb.getDBPath();
-    }
-
-    public void compact() throws IOException {
-        try {
-            isCompacting = true;
-            locationsDb.compact();
-        } finally {
-            isCompacting = false;
-        }
-    }
-
-    public boolean isCompacting() {
-        return isCompacting;
-    }
+    private static final int DELETE_ENTRIES_BATCH_SIZE = 100000;
 
     public void removeOffsetFromDeletedLedgers() throws IOException {
+        LongPairWrapper firstKeyWrapper = LongPairWrapper.get(-1, -1);
+        LongPairWrapper lastKeyWrapper = LongPairWrapper.get(-1, -1);
+        LongPairWrapper keyToDelete = LongPairWrapper.get(-1, -1);
+
         Set<Long> ledgersToDelete = deletedLedgers.items();
 
         if (ledgersToDelete.isEmpty()) {
             return;
         }
 
-        LongPairWrapper firstKeyWrapper = LongPairWrapper.get(-1, -1);
-        LongPairWrapper lastKeyWrapper = LongPairWrapper.get(-1, -1);
-
         log.info("Deleting indexes for ledgers: {}", ledgersToDelete);
         long startTime = System.nanoTime();
+        long deletedEntries = 0;
+        long deletedEntriesInBatch = 0;
 
-        try (Batch batch = locationsDb.newBatch()) {
+        Batch batch = locationsDb.newBatch();
+
+        try {
             for (long ledgerId : ledgersToDelete) {
                 if (log.isDebugEnabled()) {
                     log.debug("Deleting indexes from ledger {}", ledgerId);
@@ -229,20 +206,67 @@ public class EntryLocationIndex implements Closeable {
                 firstKeyWrapper.set(ledgerId, 0);
                 lastKeyWrapper.set(ledgerId, Long.MAX_VALUE);
 
-                batch.deleteRange(firstKeyWrapper.array, lastKeyWrapper.array);
-            }
+                Entry<byte[], byte[]> firstKeyRes = locationsDb.getCeil(firstKeyWrapper.array);
+                if (firstKeyRes == null || ArrayUtil.getLong(firstKeyRes.getKey(), 0) != ledgerId) {
+                    // No entries found for ledger
+                    if (log.isDebugEnabled()) {
+                        log.debug("No entries found for ledger {}", ledgerId);
+                    }
+                    continue;
+                }
 
-            batch.flush();
-            for (long ledgerId : ledgersToDelete) {
-                deletedLedgers.remove(ledgerId);
+                long firstEntryId = ArrayUtil.getLong(firstKeyRes.getKey(), 8);
+                long lastEntryId;
+                try {
+                    lastEntryId = getLastEntryInLedgerInternal(ledgerId);
+                } catch (Bookie.NoEntryException nee) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("No last entry id found for ledger {}", ledgerId);
+                    }
+                    continue;
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleting index for ledger {} entries ({} -> {})",
+                            ledgerId, firstEntryId, lastEntryId);
+                }
+
+                // Iterate over all the keys and remove each of them
+                for (long entryId = firstEntryId; entryId <= lastEntryId; entryId++) {
+                    keyToDelete.set(ledgerId, entryId);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Deleting index for ({}, {})", keyToDelete.getFirst(), keyToDelete.getSecond());
+                    }
+                    batch.remove(keyToDelete.array);
+                    ++deletedEntriesInBatch;
+                    ++deletedEntries;
+                }
+
+                if (deletedEntriesInBatch > DELETE_ENTRIES_BATCH_SIZE) {
+                    batch.flush();
+                    batch.clear();
+                    deletedEntriesInBatch = 0;
+                }
             }
         } finally {
-            firstKeyWrapper.recycle();
-            lastKeyWrapper.recycle();
+            try {
+                batch.flush();
+                batch.clear();
+            } finally {
+
+                firstKeyWrapper.recycle();
+                lastKeyWrapper.recycle();
+                keyToDelete.recycle();
+                batch.close();
+            }
         }
 
-        log.info("Deleted indexes from {} ledgers in {} seconds", ledgersToDelete.size(),
+        log.info("Deleted indexes for {} entries from {} ledgers in {} seconds", deletedEntries, ledgersToDelete.size(),
                 TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime) / 1000.0);
+
+        // Removed from pending set
+        for (long ledgerId : ledgersToDelete) {
+            deletedLedgers.remove(ledgerId);
+        }
     }
 
     private static final Logger log = LoggerFactory.getLogger(EntryLocationIndex.class);

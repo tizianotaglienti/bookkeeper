@@ -33,8 +33,6 @@ import static org.apache.bookkeeper.statelib.impl.rocksdb.RocksConstants.WRITE_B
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.io.MoreFiles;
-import com.google.common.io.RecursiveDeleteOption;
 import com.google.common.primitives.SignedBytes;
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +46,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -77,11 +74,9 @@ import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.LRUCache;
-import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
-import org.rocksdb.TtlDB;
 import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 
@@ -95,12 +90,7 @@ import org.rocksdb.WriteOptions;
 public class RocksdbKVStore<K, V> implements KVStore<K, V> {
 
     private static final byte[] METADATA_CF = ".meta".getBytes(UTF_8);
-
-    // Use a separate column family when a TTL is set so that we can't (easily) open a TTL
-    // enabled DB with the old code.
     private static final byte[] DATA_CF = "default".getBytes(UTF_8);
-    private static final byte[] DATA_TTL_CF = "default_ttl".getBytes(UTF_8);
-
     private static final byte[] LAST_REVISION = ".lrev".getBytes(UTF_8);
 
     private static final AtomicLongFieldUpdater<RocksdbKVStore> lastRevisionUpdater =
@@ -108,7 +98,6 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
 
     // parameters for the store
     protected String name;
-    protected int ttlSeconds;
     protected Coder<K> keyCoder;
     protected Coder<V> valCoder;
 
@@ -143,8 +132,6 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         RocksDB.loadLibrary();
     }
 
-    private boolean cleanupLocalStoreDirEnable;
-
     public RocksdbKVStore() {
         // initialize the iterators set
         this.kvIters = Collections.synchronizedSet(Sets.newHashSet());
@@ -169,7 +156,7 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         return this.name;
     }
 
-    private void loadRocksdbFromCheckpointStore(StateStoreSpec spec) throws StateStoreException {
+    private void loadRocksdbFromCheckpointStore(StateStoreSpec spec) {
         checkNotNull(spec.getCheckpointIOScheduler(),
             "checkpoint io scheduler is not configured");
         checkNotNull(spec.getCheckpointDuration(),
@@ -181,15 +168,12 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         List<CheckpointInfo> checkpoints = RocksCheckpointer.getCheckpoints(dbName, spec.getCheckpointStore());
         for (CheckpointInfo cpi : checkpoints) {
             try {
-                cpi.restore(dbName, localStorePath, spec.getCheckpointStore(), spec.getCheckpointRestoreIdleLimit());
+                cpi.restore(dbName, localStorePath, spec.getCheckpointStore());
                 openRocksdb(spec);
                 checkpoints.stream()
                     .filter(cp -> cp != cpi) // ignore the current restored checkpoint
                     .forEach(cp -> cp.remove(localStorePath)); // delete everything else
                 break;
-            } catch (TimeoutException e) {
-                log.error("Timeout waiting for checkpoint restore: {}", cpi, e);
-                throw new StateStoreException("Failed to restore checkpoint: " + cpi.getId(), e);
             } catch (StateStoreException e) {
                 // Got an exception. Log and try the next checkpoint
                 log.error("Failed to restore checkpoint: {}", cpi, e);
@@ -269,16 +253,12 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         checkNotNull(spec.getLocalStateStoreDir(),
             "local state store directory is not configured");
 
-        this.name = spec.getName();
 
-        this.cleanupLocalStoreDirEnable = spec.isLocalStorageCleanupEnable();
-        this.ttlSeconds = spec.getTtlSeconds();
+        this.name = spec.getName();
 
         // initialize the coders
         this.keyCoder = (Coder<K>) spec.getKeyCoder();
         this.valCoder = (Coder<V>) spec.getValCoder();
-
-        cleanupLocalStoreDir(spec.getLocalStateStoreDir());
 
         checkpointStore = spec.getCheckpointStore();
         if (null != checkpointStore) {
@@ -359,20 +339,18 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         return openRocksdb(dir, options, cfOpts);
     }
 
-    protected Pair<RocksDB, List<ColumnFamilyHandle>> openRocksdb(
+    protected static Pair<RocksDB, List<ColumnFamilyHandle>> openRocksdb(
         File dir, DBOptions options, ColumnFamilyOptions cfOpts)
         throws StateStoreException {
-        final boolean haveTtl = ttlSeconds != 0;
-        final ColumnFamilyDescriptor metaDesc = new ColumnFamilyDescriptor(METADATA_CF, cfOpts);
-        final ColumnFamilyDescriptor dataDesc = new ColumnFamilyDescriptor(haveTtl ? DATA_TTL_CF : DATA_CF, cfOpts);
+        // make sure the db directory's parent dir is created
+        ColumnFamilyDescriptor metaDesc = new ColumnFamilyDescriptor(METADATA_CF, cfOpts);
+        ColumnFamilyDescriptor dataDesc = new ColumnFamilyDescriptor(DATA_CF, cfOpts);
 
         try {
-            // make sure the db directory's parent dir is created
             Files.createDirectories(dir.toPath());
             File dbDir = new File(dir, "current");
 
-            final boolean dbExists = dbDir.exists();
-            if (!dbExists) {
+            if (!dbDir.exists()) {
                 // empty state
                 String uuid = UUID.randomUUID().toString();
                 Path checkpointPath = Paths.get(dir.getAbsolutePath(), "checkpoints", uuid);
@@ -380,36 +358,14 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
                 Files.createSymbolicLink(
                     Paths.get(dbDir.getAbsolutePath()),
                     checkpointPath);
-            } else {
-                // For an existing database, ensure we open with a TTL if it was created that way: values in a TTLDB
-                // are prefixed with the ttl, and therefore incompatible with a plain RocksDB.  If the new TTL value
-                // does not match the previous TTL, it will apply to any new or updated keys
-
-                try (Options opts = new org.rocksdb.Options(options, cfOpts)) {
-                    byte[] wanted = haveTtl ? DATA_TTL_CF : DATA_CF;
-                    byte[] other = haveTtl ? DATA_CF : DATA_TTL_CF;
-                    List<byte[]> cfNames = RocksDB.listColumnFamilies(opts, dbDir.getAbsolutePath());
-                    if (!cfNames.contains(wanted) && cfNames.contains(other)) {
-                        throw new StateStoreException(String.format("{}: expected {} column family, found {}",
-                                dbDir.getAbsolutePath(), wanted, other));
-                    }
-                }
             }
 
             List<ColumnFamilyHandle> cfHandles = Lists.newArrayListWithExpectedSize(2);
-            final RocksDB db = haveTtl
-                    ? TtlDB.open(
-                        options,
-                        dbDir.getAbsolutePath(),
-                        Lists.newArrayList(metaDesc, dataDesc),
-                        cfHandles,
-                        Lists.newArrayList(0, ttlSeconds),
-                        false)
-                    : RocksDB.open(
-                        options,
-                        dbDir.getAbsolutePath(),
-                        Lists.newArrayList(metaDesc, dataDesc),
-                        cfHandles);
+            RocksDB db = RocksDB.open(
+                options,
+                dbDir.getAbsolutePath(),
+                Lists.newArrayList(metaDesc, dataDesc),
+                cfHandles);
             return Pair.of(db, cfHandles);
         } catch (IOException ioe) {
             log.error("Failed to create parent directory {} for opening rocksdb", dir.getParentFile().toPath(), ioe);
@@ -454,20 +410,6 @@ public class RocksdbKVStore<K, V> implements KVStore<K, V> {
         RocksUtils.close(writeOpts);
         RocksUtils.close(flushOpts);
         RocksUtils.close(cfOpts);
-
-        cleanupLocalStoreDir(dbDir);
-    }
-
-    private void cleanupLocalStoreDir(File dbDir) {
-        if (cleanupLocalStoreDirEnable) {
-            if (dbDir.exists()) {
-                try {
-                    MoreFiles.deleteRecursively(dbDir.toPath(), RecursiveDeleteOption.ALLOW_INSECURE);
-                } catch (IOException e) {
-                    log.error("Failed to cleanup localStoreDir", e);
-                }
-            }
-        }
     }
 
     protected void closeLocalDB() {

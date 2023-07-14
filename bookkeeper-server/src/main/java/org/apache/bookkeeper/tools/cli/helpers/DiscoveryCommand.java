@@ -18,7 +18,6 @@
  */
 package org.apache.bookkeeper.tools.cli.helpers;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -45,7 +44,6 @@ public abstract class DiscoveryCommand<DiscoveryFlagsT extends CliFlags> extends
     }
 
     @Override
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     protected boolean apply(ClientConfiguration clientConf, DiscoveryFlagsT cmdFlags) {
         try {
             URI metadataServiceUri = URI.create(clientConf.getMetadataServiceUri());
@@ -56,7 +54,7 @@ public abstract class DiscoveryCommand<DiscoveryFlagsT extends CliFlags> extends
                     executor,
                     NullStatsLogger.INSTANCE,
                     Optional.empty());
-                run(driver.getRegistrationClient(), cmdFlags, clientConf.getBookieAddressResolverEnabled());
+                run(driver.getRegistrationClient(), cmdFlags);
                 return true;
             }
         } catch (Exception e) {
@@ -70,7 +68,7 @@ public abstract class DiscoveryCommand<DiscoveryFlagsT extends CliFlags> extends
         throw new IllegalStateException("It should never be called.");
     }
 
-    protected abstract void run(RegistrationClient regClient, DiscoveryFlagsT cmdFlags,
-            boolean bookieAddressResolverEnabled) throws Exception;
+    protected abstract void run(RegistrationClient regClient, DiscoveryFlagsT cmdFlags)
+        throws Exception;
 
 }

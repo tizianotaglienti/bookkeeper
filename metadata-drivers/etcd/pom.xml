@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.bookkeeper.metadata.drivers</groupId>
     <artifactId>metadata-drivers-parent</artifactId>
-    <version>4.17.0-SNAPSHOT</version>
+    <version>4.14.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -54,18 +54,6 @@
           <groupId>org.bouncycastle</groupId>
           <artifactId>bcpkix-jdk15on</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-okhttp</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-servlet</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-servlet-jakarta</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
@@ -96,12 +84,6 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.bookkeeper</groupId>
-      <artifactId>testtools</artifactId>
-      <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>

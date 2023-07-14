@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.bookkeeper.meta.MetadataDrivers.runFunctionWithLedgerMa
 
 import com.beust.jcommander.Parameter;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,9 +34,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.bookkeeper.bookie.DefaultEntryLogger;
 import org.apache.bookkeeper.bookie.EntryLogMetadata;
-import org.apache.bookkeeper.bookie.ReadOnlyDefaultEntryLogger;
+import org.apache.bookkeeper.bookie.EntryLogger;
+import org.apache.bookkeeper.bookie.ReadOnlyEntryLogger;
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager;
@@ -55,7 +54,6 @@ import org.slf4j.LoggerFactory;
  *  List active(exist in metadata storage) ledgers in a entry log file.
  *
  **/
-@SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
 public class ListActiveLedgersCommand extends BookieCommand<ActiveLedgerFlags>{
     private static final Logger LOG = LoggerFactory.getLogger(ListActiveLedgersCommand.class);
     private static final String NAME = "active ledger";
@@ -133,7 +131,7 @@ public class ListActiveLedgersCommand extends BookieCommand<ActiveLedgerFlags>{
             BKException.Code.OK, BKException.Code.ReadException);
           if (done.await(cmdFlags.timeout, TimeUnit.MILLISECONDS)){
             if  (resultCode.get() == BKException.Code.OK) {
-              DefaultEntryLogger entryLogger = new ReadOnlyDefaultEntryLogger(bkConf);
+              EntryLogger entryLogger = new ReadOnlyEntryLogger(bkConf);
               EntryLogMetadata entryLogMetadata = entryLogger.getEntryLogMetadata(cmdFlags.logId);
               List<Long> ledgersOnEntryLog = entryLogMetadata.getLedgersMap().keys();
               if (ledgersOnEntryLog.size() == 0) {
@@ -163,13 +161,13 @@ public class ListActiveLedgersCommand extends BookieCommand<ActiveLedgerFlags>{
 
     public void printActiveLedgerOnEntryLog(long logId, List<Long> activeLedgers){
       if (activeLedgers.size() == 0){
-        LOG.info("No active ledgers on log file {}", logId);
+        LOG.info("No active ledgers on log file " + logId);
       } else {
-        LOG.info("Active ledgers on entry log {} as follow:", logId);
+        LOG.info("Active ledgers on entry log " + logId + " as follow:");
       }
       Collections.sort(activeLedgers);
-      for (long a : activeLedgers){
-        LOG.info("{} ", ledgerIdFormatter.formatLedgerId(a));
+      for (long a:activeLedgers){
+        LOG.info(ledgerIdFormatter.formatLedgerId(a) + " ");
       }
     }
 }

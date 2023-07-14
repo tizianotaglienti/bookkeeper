@@ -30,7 +30,6 @@ import com.google.protobuf.TextFormat;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -420,7 +419,6 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
             record.getValue().writerIndex(0);
             record.getValue().writeLong(newAmount);
             record.setModRev(revision);
-            record.setExpireTime(System.currentTimeMillis() + (ttlSeconds * 1000));
 
             // write the mvcc record back
             batch.put(dataCfHandle, rawKey, recordCoder.encode(record));
@@ -492,7 +490,7 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
         try {
             record = getKeyRecord(key, rawKey);
         } catch (StateStoreRuntimeException e) {
-            ReferenceCountUtil.release(rawValBuf);
+            rawValBuf.release();
             throw e;
         }
 
@@ -524,7 +522,6 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
             }
             record.setValue(rawValBuf, ValueType.BYTES);
             record.setModRev(revision);
-            record.setExpireTime(System.currentTimeMillis() + (ttlSeconds * 1000));
 
             // write the mvcc record back
             batch.put(dataCfHandle, rawKey, recordCoder.encode(record));
@@ -889,10 +886,6 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
                     break;
                 }
                 MVCCRecord val = recordCoder.decode(iter.value());
-                if (val.expired()) {
-                    val.recycle();
-                    continue;
-                }
 
                 processRecord(key, val, resultKeys, resultValues, numKvs, rangeOption, countOnly);
 
@@ -937,12 +930,7 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
             if (null == valBytes) {
                 return null;
             }
-            MVCCRecord record = recordCoder.decode(valBytes);
-            if (record.expired()) {
-                record.recycle();
-                record = null;
-            }
-            return record;
+            return recordCoder.decode(valBytes);
         } catch (RocksDBException e) {
             throw new StateStoreRuntimeException("Error while getting value for key "
                 + key + " from state store " + name, e);
@@ -977,7 +965,7 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
 
         // raw key
         byte[] rawKey = (null != key) ? keyCoder.encode(key) : NULL_START_KEY;
-        byte[] rawEndKey = NULL_END_KEY;
+
         if (null == endKey) {
             // point lookup
             MVCCRecord record = getKeyRecord(key, rawKey);
@@ -1000,9 +988,8 @@ class MVCCStoreImpl<K, V> extends RocksdbKVStore<K, V> implements MVCCStore<K, V
                     record.recycle();
                 }
             }
-        } else {
-            rawEndKey = keyCoder.encode(endKey);
         }
+        byte[] rawEndKey = (null != endKey) ? keyCoder.encode(endKey) : NULL_END_KEY;
         Pair<byte[], byte[]> realRange = getRealRange(rawKey, rawEndKey);
         rawKey = realRange.getLeft();
         rawEndKey = realRange.getRight();

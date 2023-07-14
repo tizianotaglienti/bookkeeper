@@ -197,8 +197,10 @@ class SyncCallbackUtils {
         public void addLacComplete(int rc, LedgerHandle lh, Object ctx) {
             if (rc != BKException.Code.OK) {
                 log.warn("LastAddConfirmedUpdate failed: {} ", BKException.getMessage(rc));
-            } else if (log.isDebugEnabled()) {
-                log.debug("Callback LAC Updated for: {} ", lh.getId());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Callback LAC Updated for: {} ", lh.getId());
+                }
             }
         }
     }

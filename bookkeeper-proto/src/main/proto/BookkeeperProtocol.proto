@@ -46,7 +46,6 @@ enum StatusCode {
     EFENCED = 504;
     EREADONLY = 505;
     ETOOMANYREQUESTS = 506;
-    EUNKNOWNLEDGERSTATE = 507;
 }
 
 /**

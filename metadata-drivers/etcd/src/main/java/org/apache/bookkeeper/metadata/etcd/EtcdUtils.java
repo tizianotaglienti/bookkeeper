@@ -76,7 +76,7 @@ final class EtcdUtils {
 
     static String getLedgerKey(String scope, long scopeId, long ledgerId) {
         UUID uuid = new UUID(scopeId, ledgerId);
-        return String.format("%s/ledgers/%s", scope, uuid);
+        return String.format("%s/ledgers/%s", scope, uuid.toString());
     }
 
     static UUID parseLedgerKey(String ledgerKey) {

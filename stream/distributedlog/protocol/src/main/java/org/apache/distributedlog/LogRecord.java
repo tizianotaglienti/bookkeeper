@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -226,7 +225,7 @@ public class LogRecord {
 
     void setPayloadBuf(ByteBuf payload, boolean copyData) {
         if (null != this.payload) {
-            ReferenceCountUtil.release(this.payload);
+            this.payload.release();
         }
         if (copyData) {
             this.payload = Unpooled.copiedBuffer(payload);
@@ -639,9 +638,7 @@ public class LogRecord {
                         recordStream.advance(1);
                     }
                 } catch (EOFException eof) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Skip encountered end of file Exception", eof);
-                    }
+                    LOG.debug("Skip encountered end of file Exception", eof);
                     break;
                 }
             }

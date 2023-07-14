@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,10 +72,8 @@ abstract class BKAbstractLogWriter implements Closeable, AsyncCloseable, Abortab
         this.conf = conf;
         this.dynConf = dynConf;
         this.bkDistributedLogManager = bkdlm;
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Initial retention period for {} : {}", bkdlm.getStreamName(),
-                    TimeUnit.MILLISECONDS.convert(dynConf.getRetentionPeriodHours(), TimeUnit.HOURS));
-        }
+        LOG.debug("Initial retention period for {} : {}", bkdlm.getStreamName(),
+                TimeUnit.MILLISECONDS.convert(dynConf.getRetentionPeriodHours(), TimeUnit.HOURS));
     }
 
     @VisibleForTesting

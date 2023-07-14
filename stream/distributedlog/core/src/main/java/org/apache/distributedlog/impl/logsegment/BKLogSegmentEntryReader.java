@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,6 +41,7 @@ import org.apache.bookkeeper.client.LedgerEntry;
 import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.common.util.OrderedScheduler;
+import org.apache.bookkeeper.common.util.SafeRunnable;
 import org.apache.bookkeeper.stats.Counter;
 import org.apache.bookkeeper.stats.StatsLogger;
 import org.apache.distributedlog.DistributedLogConfiguration;
@@ -59,11 +60,11 @@ import org.slf4j.LoggerFactory;
 /**
  * BookKeeper ledger based log segment entry reader.
  */
-public class BKLogSegmentEntryReader implements Runnable, LogSegmentEntryReader, AsyncCallback.OpenCallback {
+public class BKLogSegmentEntryReader implements SafeRunnable, LogSegmentEntryReader, AsyncCallback.OpenCallback {
 
     private static final Logger logger = LoggerFactory.getLogger(BKLogSegmentEntryReader.class);
 
-    private class CacheEntry implements Runnable, AsyncCallback.ReadCallback,
+    private class CacheEntry implements SafeRunnable, AsyncCallback.ReadCallback,
             AsyncCallback.ReadLastConfirmedAndEntryCallback {
 
         protected final long entryId;
@@ -239,7 +240,7 @@ public class BKLogSegmentEntryReader implements Runnable, LogSegmentEntryReader,
         }
 
         @Override
-        public void run() {
+        public void safeRun() {
             issueRead(this);
         }
     }
@@ -699,7 +700,7 @@ public class BKLogSegmentEntryReader implements Runnable, LogSegmentEntryReader,
      * The core function to propagate fetched entries to read requests.
      */
     @Override
-    public void run() {
+    public void safeRun() {
         long scheduleCountLocal = scheduleCountUpdater.get(this);
         while (true) {
             PendingReadRequest nextRequest = null;
@@ -800,7 +801,7 @@ public class BKLogSegmentEntryReader implements Runnable, LogSegmentEntryReader,
                         return;
                     }
                 } finally {
-                    ReferenceCountUtil.release(removedEntry);
+                    ReferenceCountUtil.safeRelease(removedEntry);
                 }
             } else if (skipBrokenEntries && BKException.Code.DigestMatchException == entry.getRc()) {
                 // skip this entry and move forward

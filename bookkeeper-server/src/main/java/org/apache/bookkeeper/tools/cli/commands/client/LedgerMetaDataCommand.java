@@ -22,14 +22,12 @@ import static org.apache.bookkeeper.meta.MetadataDrivers.runFunctionWithLedgerMa
 
 import com.beust.jcommander.Parameter;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.bookkeeper.client.BKException.BKLedgerExistException;
 import org.apache.bookkeeper.client.api.LedgerMetadata;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager;
@@ -39,7 +37,6 @@ import org.apache.bookkeeper.tools.cli.helpers.BookieCommand;
 import org.apache.bookkeeper.tools.framework.CliFlags;
 import org.apache.bookkeeper.tools.framework.CliSpec;
 import org.apache.bookkeeper.util.LedgerIdFormatter;
-import org.apache.bookkeeper.versioning.LongVersion;
 import org.apache.bookkeeper.versioning.Versioned;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +44,6 @@ import org.slf4j.LoggerFactory;
 /**
  * Print the metadata for a ledger.
  */
-@SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
 public class LedgerMetaDataCommand extends BookieCommand<LedgerMetaDataCommand.LedgerMetadataFlag> {
 
     private static final String NAME = "show";
@@ -89,15 +85,11 @@ public class LedgerMetaDataCommand extends BookieCommand<LedgerMetaDataCommand.L
         @Parameter(names = { "-d", "--dumptofile" }, description = "Dump metadata for ledger, to a file")
         private String dumpToFile = DEFAULT;
 
-        @Parameter(names = { "-r", "--restorefromfile" }, description = "Restore metadata for ledger, from a file")
+        @Parameter(names = { "-r", "--restorefromefile" }, description = "Restore metadata for ledger, from a file")
         private String restoreFromFile = DEFAULT;
 
         @Parameter(names =  {"-lf", "--ledgeridformatter"}, description = "Set ledger id formatter")
         private String ledgerIdFormatter = DEFAULT;
-
-        @Parameter(names = { "-u",
-                "--update" }, description = "Update metadata if already exist while restoring metadata")
-        private boolean update = false;
     }
 
     @Override
@@ -130,15 +122,7 @@ public class LedgerMetaDataCommand extends BookieCommand<LedgerMetaDataCommand.L
                     byte[] serialized = Files.readAllBytes(
                         FileSystems.getDefault().getPath(flag.restoreFromFile));
                     LedgerMetadata md = serDe.parseConfig(serialized, flag.ledgerId, Optional.empty());
-                    try {
-                        m.createLedgerMetadata(flag.ledgerId, md).join();
-                    } catch (Exception be) {
-                        if (!flag.update || !(be.getCause() instanceof BKLedgerExistException)) {
-                            throw be;
-                        }
-                        m.writeLedgerMetadata(flag.ledgerId, md, new LongVersion(-1L)).join();
-                        LOG.info("successsfully updated ledger metadata {}", flag.ledgerId);
-                    }
+                    m.createLedgerMetadata(flag.ledgerId, md).join();
                 } else {
                     printLedgerMetadata(flag.ledgerId, m.readLedgerMetadata(flag.ledgerId).get().getValue(), true);
                 }
@@ -151,9 +135,9 @@ public class LedgerMetaDataCommand extends BookieCommand<LedgerMetaDataCommand.L
     }
 
     private void printLedgerMetadata(long ledgerId, LedgerMetadata md, boolean printMeta) {
-        LOG.info("ledgerID: {}", ledgerIdFormatter.formatLedgerId(ledgerId));
+        LOG.info("ledgerID: " + ledgerIdFormatter.formatLedgerId(ledgerId));
         if (printMeta) {
-            LOG.info("{}", md.toString());
+            LOG.info(md.toString());
         }
     }
 }

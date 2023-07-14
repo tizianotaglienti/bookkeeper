@@ -22,7 +22,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.Callable;
@@ -549,7 +548,7 @@ public abstract class AbstractStateStoreWithJournal<LocalStateStoreT extends Sta
         long txId = ++nextRevision;
         return FutureUtils.ensure(
             writer.write(new LogRecord(txId, cmdBuf.nioBuffer())),
-            () -> ReferenceCountUtil.release(cmdBuf));
+            () -> cmdBuf.release());
     }
 
     protected synchronized CompletableFuture<Long> writeCommandBufReturnTxId(ByteBuf cmdBuf) {
@@ -557,7 +556,7 @@ public abstract class AbstractStateStoreWithJournal<LocalStateStoreT extends Sta
         return FutureUtils.ensure(
             writer.write(new LogRecord(txId, cmdBuf.nioBuffer()))
                 .thenApply(dlsn -> txId),
-            () -> ReferenceCountUtil.release(cmdBuf));
+            () -> cmdBuf.release());
     }
 
     //

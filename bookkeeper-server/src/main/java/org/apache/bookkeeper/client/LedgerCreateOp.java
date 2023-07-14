@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.bookkeeper.client.AsyncCallback.CreateCallback;
 import org.apache.bookkeeper.client.BKException.BKNotEnoughBookiesException;
 import org.apache.bookkeeper.client.BookKeeper.DigestType;
@@ -67,7 +68,6 @@ class LedgerCreateOp {
     final int writeQuorumSize;
     final int ackQuorumSize;
     final Map<String, byte[]> customMetadata;
-    final int metadataFormatVersion;
     final byte[] passwd;
     final BookKeeper bk;
     final DigestType digestType;
@@ -107,7 +107,6 @@ class LedgerCreateOp {
             EnumSet<WriteFlag> writeFlags,
             BookKeeperClientStats clientStats) {
         this.bk = bk;
-        this.metadataFormatVersion = bk.getConf().getLedgerMetadataFormatVersion();
         this.ensembleSize = ensembleSize;
         this.writeQuorumSize = writeQuorumSize;
         this.ackQuorumSize = ackQuorumSize;
@@ -175,7 +174,6 @@ class LedgerCreateOp {
         if (customMetadata != null) {
             metadataBuilder.withCustomMetadata(customMetadata);
         }
-        metadataBuilder.withMetadataFormatVersion(metadataFormatVersion);
         if (bk.getConf().getStoreSystemtimeAsLedgerCreationTime()) {
             metadataBuilder.withCreationTime(System.currentTimeMillis()).storingCreationTime(true);
         }
@@ -271,11 +269,7 @@ class LedgerCreateOp {
         } else {
             createOpLogger.registerSuccessfulEvent(MathUtils.elapsedNanos(startTime), TimeUnit.NANOSECONDS);
         }
-        if (lh != null) { // lh is null in case of errors
-            lh.executeOrdered(() -> cb.createComplete(rc, lh, ctx));
-        } else {
-            cb.createComplete(rc, null, ctx);
-        }
+        cb.createComplete(rc, lh, ctx);
     }
 
     public static class CreateBuilderImpl implements CreateBuilder {

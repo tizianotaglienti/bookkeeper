@@ -23,6 +23,7 @@ package org.apache.bookkeeper.client;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
+
 import org.apache.bookkeeper.client.AsyncCallback.AddCallback;
 import org.apache.bookkeeper.client.AsyncCallback.CloseCallback;
 import org.apache.bookkeeper.client.AsyncCallback.ReadCallback;
@@ -42,8 +44,10 @@ import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.GenericCallback;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.LedgerMetadataListener;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.ReadEntryListener;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.TimedGenericCallback;
+import org.apache.bookkeeper.util.SafeRunnable;
 import org.apache.bookkeeper.versioning.Version;
 import org.apache.bookkeeper.versioning.Versioned;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +63,7 @@ class ReadOnlyLedgerHandle extends LedgerHandle implements LedgerMetadataListene
     private Object metadataLock = new Object();
     private final NavigableMap<Long, List<BookieId>> newEnsemblesFromRecovery = new TreeMap<>();
 
-    class MetadataUpdater implements Runnable {
+    class MetadataUpdater extends SafeRunnable {
 
         final Versioned<LedgerMetadata> newMetadata;
 
@@ -68,7 +72,7 @@ class ReadOnlyLedgerHandle extends LedgerHandle implements LedgerMetadataListene
         }
 
         @Override
-        public void run() {
+        public void safeRun() {
             while (true) {
                 Versioned<LedgerMetadata> currentMetadata = getVersionedLedgerMetadata();
                 Version.Occurred occurred = currentMetadata.getVersion().compare(newMetadata.getVersion());
@@ -326,14 +330,11 @@ class ReadOnlyLedgerHandle extends LedgerHandle implements LedgerMetadataListene
                     return builder.withClosedState().withLastEntryId(lac).withLength(len).build();
                 },
                 this::setLedgerMetadata).run();
-        f.whenComplete((result, exception) -> {
-            synchronized (metadataLock) {
-                newEnsemblesFromRecovery.clear();
-            }
-            if (exception != null) {
-                LOG.error("When closeRecovered,failed on clearing newEnsemblesFromRecovery.", exception);
-            }
-        });
+        f.thenRun(() -> {
+                synchronized (metadataLock) {
+                    newEnsemblesFromRecovery.clear();
+                }
+            });
         return f;
     }
 

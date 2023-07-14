@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -652,10 +652,7 @@ class BKLogWriteHandler extends BKLogHandler {
         writeLogSegment(txn, l);
 
         // Try storing max sequence number.
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Try storing max sequence number in startLogSegment {} : {}",
-                    inprogressZnodePath, logSegmentSeqNo);
-        }
+        LOG.debug("Try storing max sequence number in startLogSegment {} : {}", inprogressZnodePath, logSegmentSeqNo);
         storeMaxSequenceNumber(txn, maxLogSegmentSequenceNo, logSegmentSeqNo, true);
 
         txn.execute().whenCompleteAsync(new FutureEventListener<Void>() {
@@ -892,9 +889,7 @@ class BKLogWriteHandler extends BKLogHandler {
             return;
         }
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Completing and Closing Log Segment {} {}", firstTxId, lastTxId);
-        }
+        LOG.debug("Completing and Closing Log Segment {} {}", firstTxId, lastTxId);
         LogSegmentMetadata inprogressLogSegment = readLogSegmentFromCache(inprogressZnodeName);
 
         // validate log segment
@@ -987,10 +982,7 @@ class BKLogWriteHandler extends BKLogHandler {
         // store max sequence number
         storeMaxSequenceNumber(txn, maxLogSegmentSequenceNo, maxSeqNo, false);
         // update max txn id.
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Trying storing LastTxId in Finalize Path {} LastTxId {}",
-                    pathForCompletedLedger, lastTxId);
-        }
+        LOG.debug("Trying storing LastTxId in Finalize Path {} LastTxId {}", pathForCompletedLedger, lastTxId);
         storeMaxTxId(txn, maxTxId, lastTxId);
 
         txn.execute().whenCompleteAsync(new FutureEventListener<Void>() {
@@ -1104,9 +1096,7 @@ class BKLogWriteHandler extends BKLogHandler {
             LogSegmentMetadata l = logSegments.get(i);
             if (!l.isInProgress()) {
                 if (l.getLastDLSN().compareTo(dlsn) < 0) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("{}: Truncating log segment {} ", getFullyQualifiedName(), l);
-                    }
+                    LOG.debug("{}: Truncating log segment {} ", getFullyQualifiedName(), l);
                     truncateList.add(l);
                 } else if (l.getFirstDLSN().compareTo(dlsn) < 0) {
                     // Can be satisfied by at most one segment

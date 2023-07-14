@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -1339,10 +1339,7 @@ class BKLogSegmentWriter implements LogSegmentWriter, AddCallback, Runnable, Siz
     private synchronized  void backgroundFlush(boolean controlFlushOnly)  {
         if (null != closeFuture) {
             // if the log segment is closing, skip any background flushing
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Skip background flushing since log segment {} is closing.",
-                        getFullyQualifiedLogSegment());
-            }
+            LOG.debug("Skip background flushing since log segment {} is closing.", getFullyQualifiedLogSegment());
             return;
         }
         try {
@@ -1369,10 +1366,8 @@ class BKLogSegmentWriter implements LogSegmentWriter, AddCallback, Runnable, Siz
     private synchronized  void keepAlive() {
         if (null != closeFuture) {
             // if the log segment is closing, skip sending any keep alive records.
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Skip sending keepAlive control record since log segment {} is closing.",
-                        getFullyQualifiedLogSegment());
-            }
+            LOG.debug("Skip sending keepAlive control record since log segment {} is closing.",
+                    getFullyQualifiedLogSegment());
             return;
         }
 

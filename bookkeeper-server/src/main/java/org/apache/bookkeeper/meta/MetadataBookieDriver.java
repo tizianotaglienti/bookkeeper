@@ -18,10 +18,9 @@
  */
 package org.apache.bookkeeper.meta;
 
-import java.util.concurrent.CompletableFuture;
-import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.discover.RegistrationManager;
+import org.apache.bookkeeper.discover.RegistrationManager.RegistrationListener;
 import org.apache.bookkeeper.meta.exceptions.MetadataException;
 import org.apache.bookkeeper.stats.StatsLogger;
 
@@ -34,10 +33,12 @@ public interface MetadataBookieDriver extends AutoCloseable {
      * Initialize the metadata driver.
      *
      * @param conf configuration
+     * @param listener registration listener listening on registration state changes.
      * @param statsLogger stats logger
      * @return metadata driver
      */
     MetadataBookieDriver initialize(ServerConfiguration conf,
+                                    RegistrationListener listener,
                                     StatsLogger statsLogger)
         throws MetadataException;
 
@@ -49,11 +50,11 @@ public interface MetadataBookieDriver extends AutoCloseable {
     String getScheme();
 
     /**
-     * Create the registration manager used for registering/unregistering bookies.
+     * Return the registration manager used for registering/unregistering bookies.
      *
      * @return the registration manager used for registering/unregistering bookies.
      */
-    RegistrationManager createRegistrationManager();
+    RegistrationManager getRegistrationManager();
 
     /**
      * Return the ledger manager factory used for accessing ledger metadata.
@@ -69,31 +70,6 @@ public interface MetadataBookieDriver extends AutoCloseable {
      * @return the layout manager.
      */
     LayoutManager getLayoutManager();
-
-    /**
-     * Return health check is enable or disable.
-     *
-     * @return true if health check is enable, otherwise false.
-     */
-    default CompletableFuture<Boolean>  isHealthCheckEnabled() {
-        return FutureUtils.value(true);
-    }
-
-    /**
-     * Disable health check.
-     */
-    default CompletableFuture<Void> disableHealthCheck() {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        result.completeExceptionally(new Exception("disableHealthCheck is not supported by this metadata driver"));
-        return result;
-    }
-
-    /**
-     * Enable health check.
-     */
-    default CompletableFuture<Void>  enableHealthCheck() {
-        return FutureUtils.Void();
-    }
 
     @Override
     void close();

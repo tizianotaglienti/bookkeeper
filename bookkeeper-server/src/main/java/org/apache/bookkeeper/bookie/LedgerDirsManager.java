@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,6 @@
  */
 package org.apache.bookkeeper.bookie;
 
-import static org.apache.bookkeeper.bookie.BookKeeperServerStats.LD_NUM_DIRS;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.LD_WRITABLE_DIRS;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -59,16 +58,13 @@ public class LedgerDirsManager {
 
     private final DiskChecker diskChecker;
 
-    public LedgerDirsManager(ServerConfiguration conf, File[] dirs, DiskChecker diskChecker) throws IOException {
+    public LedgerDirsManager(ServerConfiguration conf, File[] dirs, DiskChecker diskChecker) {
         this(conf, dirs, diskChecker, NullStatsLogger.INSTANCE);
     }
 
-    public LedgerDirsManager(ServerConfiguration conf, File[] dirs, DiskChecker diskChecker, StatsLogger statsLogger)
-            throws IOException {
-        this.ledgerDirectories = Arrays.asList(BookieImpl.getCurrentDirectories(dirs));
-        for (File f : this.ledgerDirectories) {
-            BookieImpl.checkDirectoryStructure(f);
-        }
+    public LedgerDirsManager(ServerConfiguration conf, File[] dirs, DiskChecker diskChecker, StatsLogger statsLogger) {
+        this.ledgerDirectories = Arrays.asList(Bookie
+                .getCurrentDirectories(dirs));
         this.writableLedgerDirectories = new ArrayList<File>(ledgerDirectories);
         this.filledDirs = new ArrayList<File>();
         this.listeners = new ArrayList<LedgerDirsListener>();
@@ -103,20 +99,6 @@ public class LedgerDirsManager {
             @Override
             public Number getSample() {
                 return writableLedgerDirectories.size();
-            }
-        });
-
-        final int numDirs = dirs.length;
-        statsLogger.registerGauge(LD_NUM_DIRS, new Gauge<Number>() {
-
-            @Override
-            public Number getDefaultValue() {
-                return numDirs;
-            }
-
-            @Override
-            public Number getSample() {
-                return numDirs;
             }
         });
     }
@@ -434,19 +416,6 @@ public class LedgerDirsManager {
          */
         default void allDisksFull(boolean highPriorityWritesAllowed) {}
 
-        /**
-         * This will be notified whenever all disks are detected as not full.
-         *
-         */
-        default void allDisksWritable() {}
-
-        /**
-         * This will be notified whenever any disks are detected as full.
-         *
-         * @param highPriorityWritesAllowed the parameter indicates we are still have disk spaces for high priority
-         *          *                                  writes even disks are detected as "full"
-         */
-        default void anyDiskFull(boolean highPriorityWritesAllowed) {}
         /**
          * This will notify the fatal errors.
          */

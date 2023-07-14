@@ -127,16 +127,9 @@ public class BroadCastStatsLogger {
                 }
 
                 @Override
-                public void addCount(long l) {
-                    firstCounter.addCount(l);
-                    secondCounter.addCount(l);
-                }
-
-                @Override
-                public void addLatency(long eventLatency, TimeUnit unit) {
-                    long valueMillis = unit.toMillis(eventLatency);
-                    firstCounter.addCount(valueMillis);
-                    secondCounter.addCount(valueMillis);
+                public void add(long l) {
+                    firstCounter.add(l);
+                    secondCounter.add(l);
                 }
 
                 @Override
@@ -173,22 +166,6 @@ public class BroadCastStatsLogger {
 
             first.removeScope(scope, another.first);
             second.removeScope(scope, another.second);
-        }
-
-        /**
-         Thread-scoped stats not currently supported.
-         */
-        @Override
-        public OpStatsLogger getThreadScopedOpStatsLogger(String name) {
-            return getOpStatsLogger(name);
-        }
-
-        /**
-         Thread-scoped stats not currently supported.
-         */
-        @Override
-        public Counter getThreadScopedCounter(String name) {
-            return getCounter(name);
         }
     }
 

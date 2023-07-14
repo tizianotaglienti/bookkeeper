@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -36,7 +36,6 @@ public interface HttpServer {
         BAD_REQUEST(400),
         FORBIDDEN(403),
         NOT_FOUND(404),
-        METHOD_NOT_ALLOWED(405),
         INTERNAL_ERROR(500),
         SERVICE_UNAVAILABLE(503);
 
@@ -83,14 +82,9 @@ public interface HttpServer {
         GC,
         GC_DETAILS,
         BOOKIE_STATE,
-        BOOKIE_SANITY,
-        BOOKIE_STATE_READONLY,
         BOOKIE_IS_READY,
         BOOKIE_INFO,
-        CLUSTER_INFO,
-        RESUME_GC_COMPACTION,
-        SUSPEND_GC_COMPACTION,
-        TRIGGER_ENTRY_LOCATION_COMPACT,
+
         // autorecovery
         AUTORECOVERY_STATUS,
         RECOVERY_BOOKIE,
@@ -110,16 +104,6 @@ public interface HttpServer {
      * Start the HTTP server on given port.
      */
     boolean startServer(int port);
-
-    /**
-     * Start the HTTP server on given port and host.
-     */
-    boolean startServer(int port, String host);
-
-    /**
-     * Start the HTTP server on given port and host.
-     */
-    boolean startServer(int port, String host, HttpServerConfiguration httpServerConfiguration);
 
     /**
      * Stop the HTTP server.

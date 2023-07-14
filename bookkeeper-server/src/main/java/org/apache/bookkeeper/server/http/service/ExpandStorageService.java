@@ -21,16 +21,13 @@ package org.apache.bookkeeper.server.http.service;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.Lists;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieException;
-import org.apache.bookkeeper.bookie.BookieImpl;
-import org.apache.bookkeeper.bookie.LegacyCookieValidation;
 import org.apache.bookkeeper.conf.ServerConfiguration;
-import org.apache.bookkeeper.discover.RegistrationManager;
 import org.apache.bookkeeper.http.HttpServer;
 import org.apache.bookkeeper.http.service.HttpEndpointService;
 import org.apache.bookkeeper.http.service.HttpServiceRequest;
@@ -63,18 +60,17 @@ public class ExpandStorageService implements HttpEndpointService {
      * Update the directories info in the conf file before running the command.
      */
     @Override
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     public HttpServiceResponse handle(HttpServiceRequest request) throws Exception {
         HttpServiceResponse response = new HttpServiceResponse();
 
         if (HttpServer.Method.PUT == request.getMethod()) {
-            File[] ledgerDirectories = BookieImpl.getCurrentDirectories(conf.getLedgerDirs());
-            File[] journalDirectories = BookieImpl.getCurrentDirectories(conf.getJournalDirs());
+            File[] ledgerDirectories = Bookie.getCurrentDirectories(conf.getLedgerDirs());
+            File[] journalDirectories = Bookie.getCurrentDirectories(conf.getJournalDirs());
             File[] indexDirectories;
             if (null == conf.getIndexDirs()) {
                 indexDirectories = ledgerDirectories;
             } else {
-                indexDirectories = BookieImpl.getCurrentDirectories(conf.getIndexDirs());
+                indexDirectories = Bookie.getCurrentDirectories(conf.getIndexDirs());
             }
 
             List<File> allLedgerDirs = Lists.newArrayList();
@@ -84,15 +80,11 @@ public class ExpandStorageService implements HttpEndpointService {
             }
 
             try (MetadataBookieDriver driver = MetadataDrivers.getBookieDriver(
-                         URI.create(conf.getMetadataServiceUri()))) {
-                driver.initialize(conf, NullStatsLogger.INSTANCE);
-
-                try (RegistrationManager registrationManager = driver.createRegistrationManager()) {
-                    LegacyCookieValidation validation = new LegacyCookieValidation(conf, registrationManager);
-                    List<File> dirs = Lists.newArrayList(journalDirectories);
-                    dirs.addAll(allLedgerDirs);
-                    validation.checkCookies(dirs);
-                }
+                URI.create(conf.getMetadataServiceUri())
+            )) {
+                driver.initialize(conf, () -> { }, NullStatsLogger.INSTANCE);
+                Bookie.checkEnvironmentWithStorageExpansion(conf, driver,
+                  Lists.newArrayList(journalDirectories), allLedgerDirs);
             } catch (BookieException e) {
                 LOG.error("Exception occurred while updating cookie for storage expansion", e);
                 response.setCode(HttpServer.StatusCode.INTERNAL_ERROR);
@@ -101,9 +93,7 @@ public class ExpandStorageService implements HttpEndpointService {
             }
 
             String jsonResponse = "Success expand storage";
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("output body:" + jsonResponse);
-            }
+            LOG.debug("output body:" + jsonResponse);
             response.setBody(jsonResponse);
             response.setCode(HttpServer.StatusCode.OK);
             return response;

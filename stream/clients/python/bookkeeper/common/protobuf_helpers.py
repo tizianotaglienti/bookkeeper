@@ -12,13 +12,9 @@
 
 """Helpers for :mod:`protobuf`."""
 
+import collections
 import copy
 import inspect
-
-from collections.abc import Mapping
-from collections.abc import MutableMapping
-from collections.abc import MutableSequence
-from collections import OrderedDict
 
 from google.protobuf import field_mask_pb2
 from google.protobuf import message
@@ -86,7 +82,7 @@ def get_messages(module):
             Message class names as keys, and the Message subclasses themselves
             as values.
     """
-    answer = OrderedDict()
+    answer = collections.OrderedDict()
     for name in dir(module):
         candidate = getattr(module, name)
         if (inspect.isclass(candidate) and
@@ -147,7 +143,7 @@ def get(msg_or_dict, key, default=_SENTINEL):
     # If we get something else, complain.
     if isinstance(msg_or_dict, message.Message):
         answer = getattr(msg_or_dict, key, default)
-    elif isinstance(msg_or_dict, Mapping):
+    elif isinstance(msg_or_dict, collections.Mapping):
         answer = msg_or_dict.get(key, default)
     else:
         raise TypeError(
@@ -170,7 +166,7 @@ def _set_field_on_message(msg, key, value):
     """Set helper for protobuf Messages."""
     # Attempt to set the value on the types of objects we know how to deal
     # with.
-    if isinstance(value, (MutableSequence, tuple)):
+    if isinstance(value, (collections.MutableSequence, tuple)):
         # Clear the existing repeated protobuf message of any elements
         # currently inside it.
         while getattr(msg, key):
@@ -178,13 +174,13 @@ def _set_field_on_message(msg, key, value):
 
         # Write our new elements to the repeated field.
         for item in value:
-            if isinstance(item, Mapping):
+            if isinstance(item, collections.Mapping):
                 getattr(msg, key).add(**item)
             else:
                 # protobuf's RepeatedCompositeContainer doesn't support
                 # append.
                 getattr(msg, key).extend([item])
-    elif isinstance(value, Mapping):
+    elif isinstance(value, collections.Mapping):
         # Assign the dictionary values to the protobuf message.
         for item_key, item_value in value.items():
             set(getattr(msg, key), item_key, item_value)
@@ -206,7 +202,7 @@ def set(msg_or_dict, key, value):
     """
     # Sanity check: Is our target object valid?
     if (not isinstance(msg_or_dict,
-                       (MutableMapping, message.Message))):
+                       (collections.MutableMapping, message.Message))):
         raise TypeError(
             'set() expected a dict or protobuf message, got {!r}.'.format(
                 type(msg_or_dict)))
@@ -217,12 +213,12 @@ def set(msg_or_dict, key, value):
     # If a subkey exists, then get that object and call this method
     # recursively against it using the subkey.
     if subkey is not None:
-        if isinstance(msg_or_dict, MutableMapping):
+        if isinstance(msg_or_dict, collections.MutableMapping):
             msg_or_dict.setdefault(basekey, {})
         set(get(msg_or_dict, basekey), subkey, value)
         return
 
-    if isinstance(msg_or_dict, MutableMapping):
+    if isinstance(msg_or_dict, collections.MutableMapping):
         msg_or_dict[key] = value
     else:
         _set_field_on_message(msg_or_dict, key, value)

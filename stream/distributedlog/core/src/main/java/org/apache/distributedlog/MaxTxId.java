@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ class MaxTxId {
             try {
                 this.currentMax = DLUtils.deserializeTransactionId(maxTxIdData.getValue());
             } catch (NumberFormatException e) {
-                LOG.warn("Invalid txn id stored in ", e);
+                LOG.warn("Invalid txn id stored in {}", e);
                 this.currentMax = DistributedLogConstants.INVALID_TXID;
             }
         } else {

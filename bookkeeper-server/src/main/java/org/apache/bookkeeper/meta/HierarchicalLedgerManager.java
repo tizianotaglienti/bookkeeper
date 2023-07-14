@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.bookkeeper.meta;
 
 import java.io.IOException;
+
 import org.apache.bookkeeper.conf.AbstractConfiguration;
 import org.apache.bookkeeper.meta.LedgerManager.LedgerRangeIterator;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.Processor;
@@ -121,16 +122,5 @@ class HierarchicalLedgerManager extends AbstractHierarchicalLedgerManager {
     @Override
     protected String getLedgerParentNodeRegex() {
         return StringUtils.HIERARCHICAL_LEDGER_PARENT_NODE_REGEX;
-    }
-
-    @Override
-    public void close() {
-        super.close();
-        if (legacyLM != null) {
-            legacyLM.close();
-        }
-        if (longLM != null) {
-            longLM.close();
-        }
     }
 }

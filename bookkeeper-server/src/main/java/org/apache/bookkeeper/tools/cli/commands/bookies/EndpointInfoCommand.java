@@ -80,32 +80,32 @@ public class EndpointInfoCommand extends BookieCommand<EndpointInfoCommand.Endpo
         ClientConfiguration adminConf = new ClientConfiguration(conf);
         BookKeeperAdmin admin = new BookKeeperAdmin(adminConf);
         try {
-            final String bookieIdStr = flags.bookie;
-            if (bookieIdStr == null || bookieIdStr.isEmpty()) {
+            final String bookieId = flags.bookie;
+            if (bookieId == null || bookieId.isEmpty()) {
                 throw new IllegalArgumentException("BookieId is required");
             }
-            BookieId bookieId = BookieId.parse(bookieIdStr);
+            BookieId address = BookieId.parse(bookieId);
             Collection<BookieId> allBookies = admin.getAllBookies();
-            if (!allBookies.contains(bookieId)) {
-                LOG.info("Bookie {} does not exist, only {}", bookieId, allBookies);
+            if (!allBookies.contains(address)) {
+                LOG.info("Bookie " + bookieId + " does not exist, only " + allBookies);
                 return false;
             }
             BookieServiceInfo bookieServiceInfo = admin.getBookieServiceInfo(bookieId);
 
-            LOG.info("BookiedId: {}", bookieId);
+            LOG.info("BookiedId: " + bookieId);
             if (!bookieServiceInfo.getProperties().isEmpty()) {
                 LOG.info("Properties");
                 bookieServiceInfo.getProperties().forEach((k, v) -> {
-                    LOG.info("{} : {}", k, v);
+                    LOG.info(k + ":" + v);
                 });
             }
             if (!bookieServiceInfo.getEndpoints().isEmpty()) {
                 bookieServiceInfo.getEndpoints().forEach(e -> {
-                    LOG.info("Endpoint: {}", e.getId());
-                    LOG.info("Protocol: {}", e.getProtocol());
-                    LOG.info("Address: {} : {}", e.getHost(), e.getPort());
-                    LOG.info("Auth: {}", e.getAuth());
-                    LOG.info("Extensions: {}", e.getExtensions());
+                    LOG.info("Endpoint: " + e.getId());
+                    LOG.info("Protocol: " + e.getProtocol());
+                    LOG.info("Address: " + e.getHost() + ":" + e.getPort());
+                    LOG.info("Auth: " + e.getAuth());
+                    LOG.info("Extensions: " + e.getExtensions());
                 });
             } else {
                 LOG.info("Bookie did not publish any endpoint info. Maybe it is down");

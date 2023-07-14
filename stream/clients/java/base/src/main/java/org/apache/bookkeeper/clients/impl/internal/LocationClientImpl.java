@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.bookkeeper.clients.config.StorageClientSettings;
 import org.apache.bookkeeper.clients.impl.internal.api.LocationClient;
@@ -83,7 +84,7 @@ public class LocationClientImpl implements LocationClient {
         cause -> shouldRetryOnException(cause);
 
     private static boolean shouldRetryOnException(Throwable cause) {
-        log.error("Not able to locate storage container ", cause);
+        log.error("Not able to locate storage container {}", cause);
         if (cause instanceof StatusRuntimeException || cause instanceof StatusException) {
             Status status;
             if (cause instanceof StatusException) {

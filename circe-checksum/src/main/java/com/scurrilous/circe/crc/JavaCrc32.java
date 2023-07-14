@@ -16,6 +16,7 @@
 package com.scurrilous.circe.crc;
 
 import java.util.zip.CRC32;
+
 import com.scurrilous.circe.StatefulHash;
 import com.scurrilous.circe.StatefulIntHash;
 import com.scurrilous.circe.StatelessIntHash;

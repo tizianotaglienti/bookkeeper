@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@
 package org.apache.bookkeeper.util;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileStore;
@@ -26,6 +27,7 @@ import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,7 +177,7 @@ public class DiskChecker {
      * Calculate the total amount of free space available
      * in all of the ledger directories put together.
      *
-     * @return freeDiskSpace in bytes
+     * @return totalDiskSpace in bytes
      * @throws IOException
      */
     public long getTotalFreeSpace(List<File> dirs) throws IOException {
@@ -191,10 +193,10 @@ public class DiskChecker {
     }
 
     /**
-     * Calculate the total amount of disk space
+     * Calculate the total amount of free space available
      * in all of the ledger directories put together.
      *
-     * @return totalDiskSpace in bytes
+     * @return freeDiskSpace in bytes
      * @throws IOException
      */
     public long getTotalDiskSpace(List<File> dirs) throws IOException {
@@ -244,21 +246,21 @@ public class DiskChecker {
         float usage = checkDiskFull(dir);
         if (!mkdirsWithExistsCheck(dir)) {
             throw new DiskErrorException("can not create directory: "
-                    + dir);
+                    + dir.toString());
         }
 
         if (!dir.isDirectory()) {
-            throw new DiskErrorException("not a directory: " + dir);
+            throw new DiskErrorException("not a directory: " + dir.toString());
         }
 
         if (!dir.canRead()) {
             throw new DiskErrorException("directory is not readable: "
-                    + dir);
+                    + dir.toString());
         }
 
         if (!dir.canWrite()) {
             throw new DiskErrorException("directory is not writable: "
-                    + dir);
+                    + dir.toString());
         }
         return usage;
     }

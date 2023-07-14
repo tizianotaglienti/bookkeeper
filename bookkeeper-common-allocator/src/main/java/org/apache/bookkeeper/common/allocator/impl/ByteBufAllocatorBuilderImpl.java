@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,10 @@
 package org.apache.bookkeeper.common.allocator.impl;
 
 import io.netty.buffer.ByteBufAllocator;
+
 import java.util.function.Consumer;
+
 import org.apache.bookkeeper.common.allocator.ByteBufAllocatorBuilder;
-import org.apache.bookkeeper.common.allocator.ByteBufAllocatorWithOomHandler;
 import org.apache.bookkeeper.common.allocator.LeakDetectionPolicy;
 import org.apache.bookkeeper.common.allocator.OutOfMemoryPolicy;
 import org.apache.bookkeeper.common.allocator.PoolingPolicy;
@@ -39,7 +40,7 @@ public class ByteBufAllocatorBuilderImpl implements ByteBufAllocatorBuilder {
     LeakDetectionPolicy leakDetectionPolicy = LeakDetectionPolicy.Disabled;
 
     @Override
-    public ByteBufAllocatorWithOomHandler build() {
+    public ByteBufAllocator build() {
         return new ByteBufAllocatorImpl(pooledAllocator, unpooledAllocator, poolingPolicy, poolingConcurrency,
                 outOfMemoryPolicy, outOfMemoryListener, leakDetectionPolicy);
     }

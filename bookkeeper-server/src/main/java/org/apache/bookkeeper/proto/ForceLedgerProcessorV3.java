@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,8 +22,9 @@ package org.apache.bookkeeper.proto;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import io.netty.channel.Channel;
 import java.util.concurrent.TimeUnit;
-import org.apache.bookkeeper.bookie.BookieImpl;
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.ForceLedgerRequest;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.ForceLedgerResponse;
@@ -38,9 +39,9 @@ import org.slf4j.LoggerFactory;
 class ForceLedgerProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ForceLedgerProcessorV3.class);
 
-    public ForceLedgerProcessorV3(Request request, BookieRequestHandler requestHandler,
+    public ForceLedgerProcessorV3(Request request, Channel channel,
                              BookieRequestProcessor requestProcessor) {
-        super(request, requestHandler, requestProcessor);
+        super(request, channel, requestProcessor);
     }
 
     // Returns null if there is no exception thrown
@@ -59,7 +60,7 @@ class ForceLedgerProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
         BookkeeperInternalCallbacks.WriteCallback wcb =
                 (int rc, long ledgerId1, long entryId, BookieId addr, Object ctx) -> {
 
-            checkArgument(entryId == BookieImpl.METAENTRY_ID_FORCE_LEDGER,
+            checkArgument(entryId == Bookie.METAENTRY_ID_FORCE_LEDGER,
                     "entryId must be METAENTRY_ID_FORCE_LEDGER but was {}", entryId);
 
             checkArgument(ledgerId1 == ledgerId,
@@ -97,7 +98,7 @@ class ForceLedgerProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
         };
         StatusCode status = null;
         try {
-            requestProcessor.getBookie().forceLedger(ledgerId, wcb, requestHandler);
+            requestProcessor.getBookie().forceLedger(ledgerId, wcb, channel);
             status = StatusCode.EOK;
         } catch (Throwable t) {
             logger.error("Unexpected exception while forcing ledger {} : ", ledgerId, t);
@@ -115,7 +116,7 @@ class ForceLedgerProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void safeRun() {
         ForceLedgerResponse forceLedgerResponse = getForceLedgerResponse();
         if (null != forceLedgerResponse) {
             Response.Builder response = Response.newBuilder()

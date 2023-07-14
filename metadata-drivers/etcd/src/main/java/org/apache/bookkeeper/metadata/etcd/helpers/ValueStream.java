@@ -15,6 +15,7 @@
 package org.apache.bookkeeper.metadata.etcd.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.common.exception.ClosedClientException;

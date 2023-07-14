@@ -23,16 +23,18 @@ package org.apache.bookkeeper.bookie;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.PrimitiveIterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.CheckpointSource.Checkpoint;
 import org.apache.bookkeeper.common.util.Watcher;
 import org.apache.bookkeeper.conf.ServerConfiguration;
@@ -51,14 +53,12 @@ import org.slf4j.LoggerFactory;
  */
 public class SortedLedgerStorage
         implements LedgerStorage, CacheCallback, SkipListFlusher,
-            CompactableLedgerStorage, DefaultEntryLogger.EntryLogListener {
+            CompactableLedgerStorage, EntryLogger.EntryLogListener {
     private static final Logger LOG = LoggerFactory.getLogger(SortedLedgerStorage.class);
 
     EntryMemTable memTable;
     private ScheduledExecutorService scheduler;
     private StateManager stateManager;
-    private ServerConfiguration conf;
-    private StatsLogger statsLogger;
     private final InterleavedLedgerStorage interleavedLedgerStorage;
 
     public SortedLedgerStorage() {
@@ -75,47 +75,37 @@ public class SortedLedgerStorage
                            LedgerManager ledgerManager,
                            LedgerDirsManager ledgerDirsManager,
                            LedgerDirsManager indexDirsManager,
+                           StateManager stateManager,
+                           CheckpointSource checkpointSource,
+                           Checkpointer checkpointer,
                            StatsLogger statsLogger,
                            ByteBufAllocator allocator)
             throws IOException {
-        this.conf = conf;
-        this.statsLogger = statsLogger;
 
         interleavedLedgerStorage.initializeWithEntryLogListener(
             conf,
             ledgerManager,
             ledgerDirsManager,
             indexDirsManager,
+            stateManager,
+            checkpointSource,
+            checkpointer,
             // uses sorted ledger storage's own entry log listener
             // since it manages entry log rotations and checkpoints.
             this,
             statsLogger,
             allocator);
 
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(
-                new ThreadFactoryBuilder()
-                .setNameFormat("SortedLedgerStorage-%d")
-                .setPriority((Thread.NORM_PRIORITY + Thread.MAX_PRIORITY) / 2).build());
-    }
-
-    @Override
-    public void setStateManager(StateManager stateManager) {
-        interleavedLedgerStorage.setStateManager(stateManager);
-        this.stateManager = stateManager;
-    }
-    @Override
-    public void setCheckpointSource(CheckpointSource checkpointSource) {
-        interleavedLedgerStorage.setCheckpointSource(checkpointSource);
-
         if (conf.isEntryLogPerLedgerEnabled()) {
             this.memTable = new EntryMemTableWithParallelFlusher(conf, checkpointSource, statsLogger);
         } else {
             this.memTable = new EntryMemTable(conf, checkpointSource, statsLogger);
         }
-    }
-    @Override
-    public void setCheckpointer(Checkpointer checkpointer) {
-        interleavedLedgerStorage.setCheckpointer(checkpointer);
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(
+                new ThreadFactoryBuilder()
+                .setNameFormat("SortedLedgerStorage-%d")
+                .setPriority((Thread.NORM_PRIORITY + Thread.MAX_PRIORITY) / 2).build());
+        this.stateManager = stateManager;
     }
 
     @VisibleForTesting
@@ -159,12 +149,6 @@ public class SortedLedgerStorage
             }
         }
         return true;
-    }
-
-    @Override
-    public boolean entryExists(long ledgerId, long entryId) throws IOException {
-        // can probably be implemented as above, but I'm not going to test it
-        throw new UnsupportedOperationException("Not supported for SortedLedgerStorage");
     }
 
     @Override
@@ -213,7 +197,7 @@ public class SortedLedgerStorage
     }
 
     @Override
-    public ByteBuf getEntry(long ledgerId, long entryId) throws IOException, BookieException {
+    public ByteBuf getEntry(long ledgerId, long entryId) throws IOException {
         if (entryId == BookieProtocol.LAST_ADD_CONFIRMED) {
             return getLastEntryId(ledgerId);
         }
@@ -337,7 +321,8 @@ public class SortedLedgerStorage
         return (BookieStateManager) stateManager;
     }
 
-    public DefaultEntryLogger getEntryLogger() {
+    @Override
+    public EntryLogger getEntryLogger() {
         return interleavedLedgerStorage.getEntryLogger();
     }
 
@@ -367,41 +352,6 @@ public class SortedLedgerStorage
     }
 
     @Override
-    public void forceGC(boolean forceMajor, boolean forceMinor) {
-        interleavedLedgerStorage.forceGC(forceMajor, forceMinor);
-    }
-
-    @Override
-    public void suspendMinorGC() {
-        interleavedLedgerStorage.suspendMinorGC();
-    }
-
-    @Override
-    public void suspendMajorGC() {
-        interleavedLedgerStorage.suspendMajorGC();
-    }
-
-    @Override
-    public void resumeMinorGC() {
-        interleavedLedgerStorage.resumeMinorGC();
-    }
-
-    @Override
-    public void resumeMajorGC() {
-        interleavedLedgerStorage.resumeMajorGC();
-    }
-
-    @Override
-    public boolean isMajorGcSuspended() {
-        return interleavedLedgerStorage.isMajorGcSuspended();
-    }
-
-    @Override
-    public boolean isMinorGcSuspended() {
-        return interleavedLedgerStorage.isMinorGcSuspended();
-    }
-
-    @Override
     public List<DetectedInconsistency> localConsistencyCheck(Optional<RateLimiter> rateLimiter) throws IOException {
         return interleavedLedgerStorage.localConsistencyCheck(rateLimiter);
     }
@@ -421,40 +371,5 @@ public class SortedLedgerStorage
         PrimitiveIterator.OfLong entriesInMemtableItr = memTable.getListOfEntriesOfLedger(ledgerId);
         PrimitiveIterator.OfLong entriesFromILSItr = interleavedLedgerStorage.getListOfEntriesOfLedger(ledgerId);
         return IteratorUtility.mergePrimitiveLongIterator(entriesInMemtableItr, entriesFromILSItr);
-    }
-
-    @Override
-    public void setLimboState(long ledgerId) throws IOException {
-        throw new UnsupportedOperationException(
-                "Limbo state only supported for DbLedgerStorage");
-    }
-
-    @Override
-    public boolean hasLimboState(long ledgerId) throws IOException {
-        throw new UnsupportedOperationException(
-                "Limbo state only supported for DbLedgerStorage");
-    }
-
-    @Override
-    public void clearLimboState(long ledgerId) throws IOException {
-        throw new UnsupportedOperationException(
-                "Limbo state only supported for DbLedgerStorage");
-    }
-
-    @Override
-    public EnumSet<StorageState> getStorageStateFlags() throws IOException {
-        return EnumSet.noneOf(StorageState.class);
-    }
-
-    @Override
-    public void setStorageStateFlag(StorageState flags) throws IOException {
-        throw new UnsupportedOperationException(
-                "Storage state only flags supported for DbLedgerStorage");
-    }
-
-    @Override
-    public void clearStorageStateFlag(StorageState flags) throws IOException {
-        throw new UnsupportedOperationException(
-                "Storage state flags only supported for DbLedgerStorage");
     }
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,10 +27,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Network Utilities.
  */
 public class NetUtils {
+    private static final Logger logger = LoggerFactory.getLogger(NetUtils.class);
 
     /**
      * Given a string representation of a host, return its ip address

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,20 +18,20 @@
 package org.apache.bookkeeper.client;
 
 import static com.google.common.base.Preconditions.checkState;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookieClient;
 import org.apache.bookkeeper.proto.BookkeeperInternalCallbacks.ForceLedgerCallback;
+import org.apache.bookkeeper.util.SafeRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This represents a request to sync the ledger on every bookie.
  */
-class ForceLedgerOp implements Runnable, ForceLedgerCallback {
+class ForceLedgerOp extends SafeRunnable implements ForceLedgerCallback {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForceLedgerOp.class);
     final CompletableFuture<Void> cb;
@@ -61,7 +61,7 @@ class ForceLedgerOp implements Runnable, ForceLedgerCallback {
     }
 
     @Override
-    public void run() {
+    public void safeRun() {
         initiate();
     }
 
@@ -118,7 +118,7 @@ class ForceLedgerOp implements Runnable, ForceLedgerCallback {
         } else {
             // at least one bookie failed, as we are waiting for all the bookies
             // we can fail immediately
-            LOG.error("ForceLedger did not succeed: Ledger {} on {}", ledgerId, addr);
+            LOG.info("ForceLedger did not succeed: Ledger {} on {}", ledgerId, addr);
             errored = true;
 
             // notify the failure

@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.apache.bookkeeper.tests</groupId>
     <artifactId>integration</artifactId>
-    <version>4.17.0-SNAPSHOT</version>
+    <version>4.14.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -31,13 +31,6 @@
   <name>Apache BookKeeper :: Tests :: Integration :: Standalone test</name>
 
   <dependencies>
-    <dependency>
-      <groupId>org.apache.bookkeeper</groupId>
-      <artifactId>testtools</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.apache.bookkeeper</groupId>
       <artifactId>bookkeeper-server</artifactId>

@@ -65,9 +65,7 @@ public class TriggerAuditService implements HttpEndpointService {
 
             response.setCode(HttpServer.StatusCode.OK);
             response.setBody("Success trigger audit.");
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("response body:" + response.getBody());
-            }
+            LOG.debug("response body:" + response.getBody());
             return response;
         } else {
             response.setCode(HttpServer.StatusCode.NOT_FOUND);

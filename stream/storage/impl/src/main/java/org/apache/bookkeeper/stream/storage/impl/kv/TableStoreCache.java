@@ -62,7 +62,7 @@ public class TableStoreCache {
         return tableStores.get(rid);
     }
 
-    public CompletableFuture<TableStore> openTableStore(long scId, RangeId rid, int ttlSeconds) {
+    public CompletableFuture<TableStore> openTableStore(long scId, RangeId rid) {
         TableStore store = tableStores.get(rid);
         if (null != store) {
             return FutureUtils.value(store);
@@ -83,7 +83,7 @@ public class TableStoreCache {
 
         // I am the first one to open a table store
         final CompletableFuture<TableStore> openingFuture = openFuture;
-        mvccStoreFactory.openStore(scId, rid.getStreamId(), rid.getRangeId(), ttlSeconds)
+        mvccStoreFactory.openStore(scId, rid.getStreamId(), rid.getRangeId())
             .thenAccept(mvccStore -> {
                 TableStore newStore = tableStoreFactory.createStore(mvccStore);
                 TableStore oldStore = tableStores.putIfAbsent(rid, newStore);

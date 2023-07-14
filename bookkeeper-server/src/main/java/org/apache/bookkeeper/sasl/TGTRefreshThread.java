@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -162,7 +162,7 @@ class TGTRefreshThread extends Thread {
                 LOG.info("refreshing now because expiry is before next scheduled refresh time.");
             } else if (now < nextRefresh) {
                 Date until = new Date(nextRefresh);
-                LOG.info("TGT refresh sleeping until: {}", until);
+                LOG.info("TGT refresh sleeping until: {}", until.toString());
                 try {
                     Thread.sleep(nextRefresh - now);
                 } catch (InterruptedException ie) {

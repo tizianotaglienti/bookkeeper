@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +19,16 @@ package org.apache.bookkeeper.conf;
 
 import static org.apache.bookkeeper.conf.ClientConfiguration.CLIENT_AUTH_PROVIDER_FACTORY_CLASS;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import javax.net.ssl.SSLEngine;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.apache.bookkeeper.common.allocator.LeakDetectionPolicy;
 import org.apache.bookkeeper.common.allocator.OutOfMemoryPolicy;
 import org.apache.bookkeeper.common.allocator.PoolingPolicy;
@@ -73,12 +75,10 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
     // Zookeeper Parameters
     protected static final String ZK_TIMEOUT = "zkTimeout";
     protected static final String ZK_SERVERS = "zkServers";
-    protected static final String ZK_RETRY_BACKOFF_MAX_RETRIES = "zkRetryBackoffMaxRetries";
 
     // Ledger Manager
     protected static final String LEDGER_MANAGER_TYPE = "ledgerManagerType";
     protected static final String LEDGER_MANAGER_FACTORY_CLASS = "ledgerManagerFactoryClass";
-    protected static final String LEDGER_METADATA_FORMAT_VERSION = "ledgerMetadataVersion";
     protected static final String ALLOW_SHADED_LEDGER_MANAGER_FACTORY_CLASS = "allowShadedLedgerManagerFactoryClass";
     protected static final String SHADED_LEDGER_MANAGER_FACTORY_CLASS_PREFIX = "shadedLedgerManagerFactoryClassPrefix";
     protected static final String METADATA_SERVICE_URI = "metadataServiceUri";
@@ -91,7 +91,6 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
     protected static final String STORE_SYSTEMTIME_AS_LEDGER_CREATION_TIME = "storeSystemTimeAsLedgerCreationTime";
 
     protected static final String ENABLE_BUSY_WAIT = "enableBusyWait";
-    protected static final String ENABLE_HEALTH_CHECK = "enableHealthCheck";
 
     // Metastore settings, only being used when LEDGER_MANAGER_FACTORY_CLASS is MSLedgerManagerFactory
     protected static final String METASTORE_IMPL_CLASS = "metastoreImplClass";
@@ -187,8 +186,6 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
     // option to limit stats logging
     public static final String LIMIT_STATS_LOGGING = "limitStatsLogging";
 
-    protected static final String REPLICATION_RATE_BY_BYTES = "replicationRateByBytes";
-
     protected AbstractConfiguration() {
         super();
         if (READ_SYSTEM_PROPERTIES) {
@@ -267,7 +264,7 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      */
     public String getMetadataServiceUri() throws ConfigurationException {
         String serviceUri = getString(METADATA_SERVICE_URI);
-        if (StringUtils.isBlank(serviceUri)) {
+        if (null == serviceUri) {
             // no service uri is defined, fallback to old settings
             String ledgerManagerType;
             ledgerManagerType = getLedgerManagerLayoutStringFromFactoryClass();
@@ -344,27 +341,6 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      */
     public T setZkTimeout(int zkTimeout) {
         setProperty(ZK_TIMEOUT, Integer.toString(zkTimeout));
-        return getThis();
-    }
-
-    /**
-     * Get zookeeper client backoff max retry times.
-     *
-     * @return zk backoff max retry times.
-     */
-    public int getZkRetryBackoffMaxRetries() {
-        return getInt(ZK_RETRY_BACKOFF_MAX_RETRIES, Integer.MAX_VALUE);
-    }
-
-    /**
-     * Set zookeeper client backoff max retry times.
-     *
-     * @param maxRetries
-     *          backoff max retry times
-     * @return server configuration.
-     */
-    public T setZkRetryBackoffMaxRetries(int maxRetries) {
-        setProperty(ZK_RETRY_BACKOFF_MAX_RETRIES, Integer.toString(maxRetries));
         return getThis();
     }
 
@@ -462,25 +438,6 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      */
     public String getLedgerManagerFactoryClassName() {
         return getString(LEDGER_MANAGER_FACTORY_CLASS);
-    }
-
-    /**
-     * Set Ledger metadata format version.
-     *
-     * @param metadataFormatVersion
-     *          Ledger metadata format version. pass -1 to use default version
-     */
-    public void setLedgerMetadataFormatVersion(int metadataFormatVersion) {
-        setProperty(LEDGER_METADATA_FORMAT_VERSION, metadataFormatVersion);
-    }
-
-    /**
-     * Get Ledger metadata format version.
-     *
-     * @return ledger metadata format version.
-     */
-    public int getLedgerMetadataFormatVersion() {
-        return getInt(LEDGER_METADATA_FORMAT_VERSION, -1);
     }
 
     /**
@@ -1083,7 +1040,7 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      * @return the configured pooling concurrency for the allocator.
      */
     public int getAllocatorPoolingConcurrency() {
-        return this.getInteger(ALLOCATOR_POOLING_CONCURRENCY, PooledByteBufAllocator.defaultNumDirectArena());
+        return this.getInteger(ALLOCATOR_POOLING_CONCURRENCY, 2 * Runtime.getRuntime().availableProcessors());
     }
 
     /**
@@ -1129,17 +1086,8 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      * Return the configured leak detection policy for the allocator.
      */
     public LeakDetectionPolicy getAllocatorLeakDetectionPolicy() {
-        //see: https://lists.apache.org/thread/d3zw8bxhlg0wxfhocyjglq0nbxrww3sg
-        String nettyLevelStr = System.getProperty("io.netty.leakDetectionLevel", LeakDetectionPolicy.Disabled.name());
-        nettyLevelStr = System.getProperty("io.netty.leakDetection.level", nettyLevelStr);
-        String bkLevelStr = getString(ALLOCATOR_LEAK_DETECTION_POLICY, LeakDetectionPolicy.Disabled.name());
-        LeakDetectionPolicy nettyLevel = LeakDetectionPolicy.parseLevel(nettyLevelStr);
-        LeakDetectionPolicy bkLevel = LeakDetectionPolicy.parseLevel(bkLevelStr);
-        if (nettyLevel.ordinal() >= bkLevel.ordinal()) {
-            return nettyLevel;
-        } else {
-            return bkLevel;
-        }
+        return LeakDetectionPolicy
+                .valueOf(this.getString(ALLOCATOR_LEAK_DETECTION_POLICY, LeakDetectionPolicy.Disabled.toString()));
     }
 
     /**
@@ -1199,7 +1147,7 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      *      the boolean flag indicating whether to limit stats logging
      */
     public boolean getLimitStatsLogging() {
-        return getBoolean(LIMIT_STATS_LOGGING, true);
+        return getBoolean(LIMIT_STATS_LOGGING, false);
     }
 
     /**
@@ -1211,28 +1159,6 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
      */
     public T setLimitStatsLogging(boolean limitStatsLogging) {
         setProperty(LIMIT_STATS_LOGGING, limitStatsLogging);
-        return getThis();
-    }
-
-    /**
-     * Get the bytes rate of re-replication.
-     * Default value is -1 which it means entries will replicated without any throttling activity.
-     *
-     * @return bytes rate of re-replication.
-     */
-    public int getReplicationRateByBytes() {
-        return getInt(REPLICATION_RATE_BY_BYTES, -1);
-    }
-
-    /**
-     * Set the bytes rate of re-replication.
-     *
-     * @param rate bytes rate of re-replication.
-     *
-     * @return ClientConfiguration
-     */
-    public T setReplicationRateByBytes(int rate) {
-        this.setProperty(REPLICATION_RATE_BY_BYTES, rate);
         return getThis();
     }
 
@@ -1255,7 +1181,7 @@ public abstract class AbstractConfiguration<T extends AbstractConfiguration>
         Map<String, Object> configMap = new HashMap<>();
         Iterator<String> iterator = this.getKeys();
         while (iterator.hasNext()) {
-            String key = iterator.next();
+            String key = iterator.next().toString();
             Object property = this.getProperty(key);
             if (property != null) {
                 configMap.put(key, property.toString());

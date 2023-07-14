@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,9 +39,8 @@ public class LedgerFragment {
     private final long ledgerId;
     private final DistributionSchedule schedule;
     private final boolean isLedgerClosed;
-    private ReplicateType replicateType = ReplicateType.DATA_LOSS;
 
-    public LedgerFragment(LedgerHandle lh,
+    LedgerFragment(LedgerHandle lh,
                    long firstEntryId,
                    long lastKnownEntryId,
                    Set<Integer> bookieIndexes) {
@@ -53,16 +52,11 @@ public class LedgerFragment {
         this.schedule = lh.getDistributionSchedule();
         SortedMap<Long, ? extends List<BookieId>> ensembles = lh
                 .getLedgerMetadata().getAllEnsembles();
-        // Check if the ledger fragment is closed has two conditions
-        // 1. The ledger is closed
-        // 2. This fragment is not the last fragment and this ledger's lastAddConfirm >= ensembles.lastKey() - 1.
-        //    This case happens when the ledger's last ensemble is empty
         this.isLedgerClosed = lh.getLedgerMetadata().isClosed()
-                || (!ensemble.equals(ensembles.get(ensembles.lastKey()))
-            && lh.getLastAddConfirmed() >= ensembles.lastKey() - 1);
+                || !ensemble.equals(ensembles.get(ensembles.lastKey()));
     }
 
-    public LedgerFragment(LedgerFragment lf, Set<Integer> subset) {
+    LedgerFragment(LedgerFragment lf, Set<Integer> subset) {
         this.ledgerId = lf.ledgerId;
         this.firstEntryId = lf.firstEntryId;
         this.lastKnownEntryId = lf.lastKnownEntryId;
@@ -97,7 +91,7 @@ public class LedgerFragment {
         return isLedgerClosed;
     }
 
-    public long getLedgerId() {
+    long getLedgerId() {
         return ledgerId;
     }
 
@@ -223,27 +217,11 @@ public class LedgerFragment {
         return this.ensemble;
     }
 
-    public ReplicateType getReplicateType() {
-        return replicateType;
-    }
-
-    public void setReplicateType(ReplicateType replicateType) {
-        this.replicateType = replicateType;
-    }
-
     @Override
     public String toString() {
         return String.format("Fragment(LedgerID: %d, FirstEntryID: %d[%d], "
-                        + "LastKnownEntryID: %d[%d], Host: %s, Closed: %s, Type: %s)", ledgerId, firstEntryId,
+                + "LastKnownEntryID: %d[%d], Host: %s, Closed: %s)", ledgerId, firstEntryId,
                 getFirstStoredEntryId(), lastKnownEntryId, getLastStoredEntryId(),
-                getAddresses(), isLedgerClosed, replicateType);
-    }
-
-    /**
-     * ReplicateType.
-     */
-    public enum ReplicateType {
-        DATA_LOSS,
-        DATA_NOT_ADHERING_PLACEMENT
+                getAddresses(), isLedgerClosed);
     }
 }

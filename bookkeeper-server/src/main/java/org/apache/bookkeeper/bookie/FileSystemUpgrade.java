@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,7 +24,6 @@ package org.apache.bookkeeper.bookie;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.bookkeeper.meta.MetadataDrivers.runFunctionWithRegistrationManager;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import java.io.File;
@@ -32,7 +31,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -98,17 +96,10 @@ public class FileSystemUpgrade {
             }
         };
 
-    @VisibleForTesting
-    public static List<File> getAllDirectories(ServerConfiguration conf) {
+    private static List<File> getAllDirectories(ServerConfiguration conf) {
         List<File> dirs = new ArrayList<>();
         dirs.addAll(Lists.newArrayList(conf.getJournalDirs()));
-        final File[] ledgerDirs = conf.getLedgerDirs();
-        final File[] indexDirs = conf.getIndexDirs();
-        if (indexDirs != null && indexDirs.length == ledgerDirs.length
-                && !Arrays.asList(indexDirs).containsAll(Arrays.asList(ledgerDirs))) {
-            dirs.addAll(Lists.newArrayList(indexDirs));
-        }
-        Collections.addAll(dirs, ledgerDirs);
+        Collections.addAll(dirs, conf.getLedgerDirs());
         return dirs;
     }
 
@@ -343,6 +334,12 @@ public class FileSystemUpgrade {
     }
 
     public static void main(String[] args) throws Exception {
+        org.apache.log4j.Logger root = org.apache.log4j.Logger.getRootLogger();
+        root.addAppender(new org.apache.log4j.ConsoleAppender(
+                                 new org.apache.log4j.PatternLayout("%-5p [%t]: %m%n")));
+        root.setLevel(org.apache.log4j.Level.ERROR);
+        org.apache.log4j.Logger.getLogger(FileSystemUpgrade.class).setLevel(
+                org.apache.log4j.Level.INFO);
 
         final Options opts = new Options();
         opts.addOption("c", "conf", true, "Configuration for Bookie");

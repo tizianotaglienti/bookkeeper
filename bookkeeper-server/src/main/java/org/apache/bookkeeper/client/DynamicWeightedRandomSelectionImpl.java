@@ -19,6 +19,7 @@ package org.apache.bookkeeper.client;
 
 import com.google.common.math.Quantiles;
 import com.google.common.math.Quantiles.ScaleAndIndex;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,7 +115,7 @@ class DynamicWeightedRandomSelectionImpl<T> implements WeightedRandomSelection<T
                     if ((weightMap.containsKey(node))) {
                         weight = weightMap.get(node).getWeight();
                     }
-                    return weight;
+                    return Long.valueOf(weight);
                 };
                 ArrayList<Long> weightList = selectedNodes.stream().map(weightFunc)
                         .collect(Collectors.toCollection(ArrayList::new));

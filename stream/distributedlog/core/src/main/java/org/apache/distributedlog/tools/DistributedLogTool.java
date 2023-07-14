@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -490,7 +489,7 @@ import org.slf4j.LoggerFactory;
                 } else {
                     System.out.println(new String(metadata, UTF_8));
                 }
-                System.out.println();
+                System.out.println("");
             }
             System.out.println("--------------------------------");
         }
@@ -540,7 +539,7 @@ import org.slf4j.LoggerFactory;
                 System.out.println(stream);
             }
 
-            System.out.println();
+            System.out.println("");
         }
 
         protected void watchAndReportChanges(Namespace namespace) throws Exception {
@@ -1040,7 +1039,7 @@ import org.slf4j.LoggerFactory;
             long eidFirst = 0;
             for (SortedMap.Entry<Long, ? extends List<BookieId>>
                     entry : LedgerReader.bookiesForLedger(lh).entrySet()) {
-                long eidLast = entry.getKey();
+                long eidLast = entry.getKey().longValue();
                 long count = eidLast - eidFirst + 1;
                 for (BookieId bookie : entry.getValue()) {
                     merge(stats, bookie, (int) count);
@@ -1052,7 +1051,7 @@ import org.slf4j.LoggerFactory;
 
         void merge(Map<BookieId, Integer> m, BookieId bookie, Integer count) {
             if (m.containsKey(bookie)) {
-                m.put(bookie, count + m.get(bookie));
+                m.put(bookie, count + m.get(bookie).intValue());
             } else {
                 m.put(bookie, count);
             }
@@ -1148,7 +1147,7 @@ import org.slf4j.LoggerFactory;
         }
 
         long countToLastRecord(DistributedLogManager dlm) throws Exception {
-            return FutureUtils.result(dlm.getLogRecordCountAsync(startDLSN));
+            return FutureUtils.result(dlm.getLogRecordCountAsync(startDLSN)).longValue();
         }
 
         @Override
@@ -1536,7 +1535,7 @@ import org.slf4j.LoggerFactory;
                 System.out.println("Record (txn = " + record.getTransactionId() + ", bytes = "
                         + record.getPayload().length + ")");
             }
-            System.out.println();
+            System.out.println("");
 
             if (skipPayload) {
                 return;
@@ -1720,7 +1719,7 @@ import org.slf4j.LoggerFactory;
                     .setEnvelopeEntry(LogSegmentMetadata.supportsEnvelopedEntries(segment.getVersion()))
                     .setEntry(lastEntry.getEntryBuffer())
                     .buildReader();
-            ReferenceCountUtil.release(lastEntry.getEntryBuffer());
+            lastEntry.getEntryBuffer().release();
             LogRecordWithDLSN record = reader.nextRecord();
             LogRecordWithDLSN lastRecord = null;
             while (null != record) {
@@ -2034,7 +2033,7 @@ import org.slf4j.LoggerFactory;
                                     .setEntry(rr.getValue())
                                     .setEnvelopeEntry(LogSegmentMetadata.supportsEnvelopedEntries(metadataVersion))
                                     .buildReader();
-                            ReferenceCountUtil.release(rr.getValue());
+                            rr.getValue().release();
                             printEntry(reader);
                         } else {
                             System.out.println("status = " + BKException.getMessage(rr.getResultCode()));
@@ -2096,7 +2095,7 @@ import org.slf4j.LoggerFactory;
                         .setEntry(entry.getEntryBuffer())
                         .setEnvelopeEntry(LogSegmentMetadata.supportsEnvelopedEntries(metadataVersion))
                         .buildReader();
-                ReferenceCountUtil.release(entry.getEntryBuffer());
+                entry.getEntryBuffer().release();
                 printEntry(reader);
                 ++i;
             }
@@ -2113,7 +2112,7 @@ import org.slf4j.LoggerFactory;
                         System.out.println(new String(record.getPayload(), UTF_8));
                     }
                 }
-                System.out.println();
+                System.out.println("");
                 record = reader.nextRecord();
             }
         }
@@ -2454,7 +2453,7 @@ import org.slf4j.LoggerFactory;
 
         @Override
         protected int runSimpleCmd() throws Exception {
-            System.out.println(DLSN.deserialize(base64Dlsn));
+            System.out.println(DLSN.deserialize(base64Dlsn).toString());
             return 0;
         }
     }

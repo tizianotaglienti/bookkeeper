@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -147,7 +147,6 @@ message StreamConfiguration {
     SegmentRollingPolicy rolling_policy = 5;
     RetentionPolicy retention_policy    = 6;
     StorageType storage_type            = 7;
-    int32 ttl_seconds                   = 8;
 }
 
 message StreamProperties {

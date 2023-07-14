@@ -22,9 +22,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.bookkeeper.bookie.Journal;
 import org.apache.bookkeeper.bookie.LedgerDirsManager;
 import org.apache.bookkeeper.bookie.LogMark;
@@ -82,24 +84,20 @@ public class GetLastLogMarkService implements HttpEndpointService {
                 }
                 for (Journal journal : journals) {
                     LogMark lastLogMark = journal.getLastLogMark().getCurMark();
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("LastLogMark: Journal Id - " + lastLogMark.getLogFileId() + "("
-                                + Long.toHexString(lastLogMark.getLogFileId()) + ".txn), Pos - "
-                                + lastLogMark.getLogFileOffset());
-                    }
+                    LOG.debug("LastLogMark: Journal Id - " + lastLogMark.getLogFileId() + "("
+                      + Long.toHexString(lastLogMark.getLogFileId()) + ".txn), Pos - "
+                      + lastLogMark.getLogFileOffset());
                     output.put("LastLogMark: Journal Id - " + lastLogMark.getLogFileId()
                         + "(" + Long.toHexString(lastLogMark.getLogFileId()) + ".txn)",
                         "Pos - " + lastLogMark.getLogFileOffset());
                 }
 
                 String jsonResponse = JsonUtil.toJson(output);
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("output body:" + jsonResponse);
-                }
+                LOG.debug("output body:" + jsonResponse);
                 response.setBody(jsonResponse);
                 response.setCode(HttpServer.StatusCode.OK);
                 return response;
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 LOG.error("Exception occurred while getting last log mark", e);
                 response.setCode(HttpServer.StatusCode.NOT_FOUND);
                 response.setBody("ERROR handling request: " + e.getMessage());

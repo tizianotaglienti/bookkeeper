@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.bookkeeper.meta;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import lombok.extern.slf4j.Slf4j;
+
 import org.apache.bookkeeper.client.BKException;
 import org.apache.bookkeeper.client.api.LedgerMetadata;
 import org.apache.bookkeeper.common.concurrent.FutureUtils;
@@ -39,7 +40,6 @@ import org.apache.zookeeper.AsyncCallback;
 /**
  * A ledger manager that cleans up resources upon closing.
  */
-@Slf4j
 public class CleanupLedgerManager implements LedgerManager {
 
     private class CleanupGenericCallback<T> implements GenericCallback<T> {
@@ -113,17 +113,7 @@ public class CleanupLedgerManager implements LedgerManager {
 
     private void recordPromise(CompletableFuture<?> promise) {
         futures.add(promise);
-        promise.whenComplete((result, exception) -> {
-            futures.remove(promise);
-            if (exception != null) {
-                log.error("Failed on operating ledger metadata: {}", BKException.getExceptionCode(exception));
-            }
-        });
-    }
-
-    @VisibleForTesting
-    int getCurrentFuturePromiseSize() {
-        return futures.size();
+        promise.thenRun(() -> futures.remove(promise));
     }
 
     @Override

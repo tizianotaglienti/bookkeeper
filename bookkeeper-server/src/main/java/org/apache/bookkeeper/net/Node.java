@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.bookkeeper.net;
 
 import com.google.common.annotations.Beta;
+
 /** The interface defines a node in a network topology.
  * A node may be a leave representing a data node or an inner
  * node representing a datacenter or rack.

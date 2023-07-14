@@ -18,7 +18,9 @@
 package org.apache.bookkeeper.proto.checksum;
 
 import io.netty.buffer.ByteBuf;
+
 import java.util.zip.CRC32;
+
 import org.apache.bookkeeper.proto.checksum.CRC32DigestManager.CRC32Digest;
 
 /**
@@ -36,7 +38,7 @@ class StandardCRC32Digest implements CRC32Digest {
     }
 
     @Override
-    public void update(ByteBuf buf, int offset, int len) {
-        crc.update(buf.slice(offset, len).nioBuffer());
+    public void update(ByteBuf buf) {
+        crc.update(buf.nioBuffer());
     }
 }

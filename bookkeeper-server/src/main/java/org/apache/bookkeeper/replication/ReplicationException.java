@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,21 +19,11 @@
 package org.apache.bookkeeper.replication;
 
 import java.util.function.Function;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Exceptions for use within the replication service.
  */
 public abstract class ReplicationException extends Exception {
-
-    public static UnavailableException fromKeeperException(String message, KeeperException ke) {
-        if (ke instanceof KeeperException.ConnectionLossException
-                || ke instanceof KeeperException.SessionExpiredException) {
-            return new NonRecoverableReplicationException(message, ke);
-        }
-        return new UnavailableException(message, ke);
-    }
-
 
     public static final Function<Throwable, ReplicationException> EXCEPTION_HANDLER = cause -> {
         if (cause instanceof ReplicationException) {
@@ -62,21 +52,6 @@ public abstract class ReplicationException extends Exception {
         }
 
         public UnavailableException(String message) {
-            super(message);
-        }
-    }
-
-    /**
-     * The replication service encountered an error that requires service restart.
-     */
-    public static class NonRecoverableReplicationException extends UnavailableException {
-        private static final long serialVersionUID = 31872211L;
-
-        public NonRecoverableReplicationException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        public NonRecoverableReplicationException(String message) {
             super(message);
         }
     }

@@ -90,14 +90,4 @@ public interface CheckpointSource {
      *          Flag to compact old checkpoints.
      */
     void checkpointComplete(Checkpoint checkpoint, boolean compact) throws IOException;
-
-    CheckpointSource DEFAULT = new CheckpointSource() {
-            @Override
-            public Checkpoint newCheckpoint() {
-                return Checkpoint.MIN;
-            }
-
-            @Override
-            public void checkpointComplete(Checkpoint checkpoint, boolean compact) {}
-        };
 }

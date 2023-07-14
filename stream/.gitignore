@@ -4,7 +4,7 @@
 .settings/
 .metadata
 
-# IntelliJ
+# Intellij
 .idea/
 *.iml
 *.iws

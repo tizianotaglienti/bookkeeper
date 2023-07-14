@@ -24,16 +24,16 @@ import org.apache.bookkeeper.statelib.api.mvcc.MVCCAsyncStore;
  * The factory that creates store for each range to store its states.
  */
 public interface MVCCStoreFactory extends AutoCloseable {
+
     /**
      * Open the state store for storing range <tt>scId</tt>/<tt>streamId</tt>/<tt>rangeId</tt>.
      *
      * @param scId     storage container id
      * @param streamId stream id
      * @param rangeId  range id
-     * @param ttlSeconds minimum milliseconds to keep records, 0 for "infinite"
-     * @return a state store instance
+     * @return an state store instance
      */
-    CompletableFuture<MVCCAsyncStore<byte[], byte[]>> openStore(long scId, long streamId, long rangeId, int ttlSeconds);
+    CompletableFuture<MVCCAsyncStore<byte[], byte[]>> openStore(long scId, long streamId, long rangeId);
 
     /**
      * Close the provided store and remove it from cache.

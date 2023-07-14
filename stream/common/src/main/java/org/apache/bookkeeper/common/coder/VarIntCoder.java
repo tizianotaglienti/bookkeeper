@@ -50,7 +50,7 @@ public class VarIntCoder implements Coder<Integer> {
         ByteBufOutputStream output = new ByteBufOutputStream(buf);
 
         try {
-            VarInt.encode(value, output);
+            VarInt.encode(value.intValue(), output);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to encode integer '" + value + "' into the provided buffer", e);
         }

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,6 +150,8 @@ class WeightedRandomSelectionImpl<T> implements WeightedRandomSelection<T> {
             Double randomNum = randomMax * Math.random();
             // find the nearest key in the map corresponding to the randomNum
             Double key = cummulativeMap.floorKey(randomNum);
+            //LOG.info("Random max: {} CummulativeMap size: {} selected key: {}", randomMax, cummulativeMap.size(),
+            //    key);
             return cummulativeMap.get(key);
         } finally {
             rwLock.readLock().unlock();

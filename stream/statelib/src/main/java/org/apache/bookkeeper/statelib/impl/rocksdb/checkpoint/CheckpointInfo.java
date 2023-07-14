@@ -28,9 +28,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.bookkeeper.statelib.api.checkpoint.CheckpointStore;
 import org.apache.bookkeeper.statelib.api.exceptions.StateStoreException;
@@ -72,8 +70,7 @@ public class CheckpointInfo implements Comparable<CheckpointInfo> {
         return new CheckpointInfo(UUID.randomUUID().toString()) {
             public CheckpointMetadata restore(String dbName,
                                               File dbPath,
-                                              CheckpointStore store,
-                                              Duration maxIdle) throws StateStoreException {
+                                              CheckpointStore store) throws StateStoreException {
                 try {
                     Files.createDirectories(getCheckpointPath(dbPath));
                     updateCurrent(dbPath);
@@ -84,7 +81,7 @@ public class CheckpointInfo implements Comparable<CheckpointInfo> {
             }
             // for proper sorting
             public Long getCreatedAt() {
-                return 0L;
+                return Long.valueOf(0);
             }
         };
     }
@@ -131,26 +128,17 @@ public class CheckpointInfo implements Comparable<CheckpointInfo> {
         return this.getCreatedAt().compareTo(o.getCreatedAt());
     }
 
-    public CheckpointMetadata restore(File dbPath, RocksdbRestoreTask task)
-        throws StateStoreException, IOException, TimeoutException {
-
+    public CheckpointMetadata restore(File dbPath, RocksdbRestoreTask task) throws StateStoreException, IOException {
         task.restore(id, metadata);
         updateCurrent(dbPath);
         log.info("Successfully restore checkpoint {} to {}", id, getCheckpointPath(dbPath));
         return metadata;
     }
-    public CheckpointMetadata restore(String dbName, File dbPath, CheckpointStore store)
-        throws StateStoreException, TimeoutException {
 
-        return restore(dbName, dbPath, store, Duration.ofMinutes(1));
-    }
-
-    public CheckpointMetadata restore(String dbName, File dbPath, CheckpointStore store, Duration maxIdle)
-        throws StateStoreException, TimeoutException {
-
+    public CheckpointMetadata restore(String dbName, File dbPath, CheckpointStore store) throws StateStoreException {
         try {
             File checkpointsDir = new File(dbPath, "checkpoints");
-            RocksdbRestoreTask task = new RocksdbRestoreTask(dbName, checkpointsDir, store, maxIdle);
+            RocksdbRestoreTask task = new RocksdbRestoreTask(dbName, checkpointsDir, store);
             return restore(dbPath, task);
         } catch (IOException ioe) {
             log.error("Failed to restore rocksdb {}", dbName, ioe);

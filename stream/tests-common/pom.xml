@@ -20,7 +20,7 @@
   <parent>
     <groupId>org.apache.bookkeeper</groupId>
     <artifactId>stream-storage-parent</artifactId>
-    <version>4.17.0-SNAPSHOT</version>
+    <version>4.14.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <groupId>org.apache.bookkeeper.tests</groupId>
@@ -39,18 +39,6 @@
         <exclusion>
           <groupId>org.bouncycastle</groupId>
           <artifactId>bcpkix-jdk15on</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-okhttp</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-servlet</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.grpc</groupId>
-          <artifactId>grpc-servlet-jakarta</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

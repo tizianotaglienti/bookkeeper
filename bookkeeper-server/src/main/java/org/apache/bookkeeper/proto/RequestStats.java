@@ -23,7 +23,6 @@ import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY_BLOCKED;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY_BLOCKED_WAIT;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY_IN_PROGRESS;
-import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY_REJECTED;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.ADD_ENTRY_REQUEST;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.CATEGORY_SERVER;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.CHANNEL_WRITE;
@@ -44,7 +43,6 @@ import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_LONG
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_LONG_POLL_READ;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_LONG_POLL_REQUEST;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_LONG_POLL_WAIT;
-import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_REJECTED;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_REQUEST;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_ENTRY_SCHEDULING_DELAY;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_LAC;
@@ -53,7 +51,6 @@ import static org.apache.bookkeeper.bookie.BookKeeperServerStats.READ_LAST_ENTRY
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.SERVER_SCOPE;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.WRITE_LAC;
 import static org.apache.bookkeeper.bookie.BookKeeperServerStats.WRITE_LAC_REQUEST;
-import static org.apache.bookkeeper.bookie.BookKeeperServerStats.WRITE_THREAD_QUEUED_LATENCY;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -93,20 +90,6 @@ public class RequestStats {
         parent = ADD_ENTRY_REQUEST
     )
     private final OpStatsLogger addEntryStats;
-
-    @StatsDoc(
-            name = WRITE_THREAD_QUEUED_LATENCY,
-            help = "operation stats of enqueuing requests to write threadpool queue",
-            parent = ADD_ENTRY_REQUEST
-    )
-    private final OpStatsLogger writeThreadQueuedLatency;
-
-    @StatsDoc(
-            name = ADD_ENTRY_REJECTED,
-            help = "Counter for rejected adds on a bookie",
-            parent = ADD_ENTRY_REQUEST
-    )
-    private final Counter addEntryRejectedCounter;
     @StatsDoc(
         name = READ_ENTRY_REQUEST,
         help = "request stats of ReadEntry on a bookie"
@@ -118,12 +101,6 @@ public class RequestStats {
         parent = READ_ENTRY_REQUEST
     )
     final OpStatsLogger readEntryStats;
-    @StatsDoc(
-            name = READ_ENTRY_REJECTED,
-            help = "Counter for rejected reads on a bookie",
-            parent = READ_ENTRY_REQUEST
-    )
-    private final Counter readEntryRejectedCounter;
     @StatsDoc(
         name = FORCE_LEDGER,
         help = "operation stats of ForceLedger on a bookie",
@@ -248,12 +225,9 @@ public class RequestStats {
     final OpStatsLogger getListOfEntriesOfLedgerStats;
 
     public RequestStats(StatsLogger statsLogger) {
-        this.addEntryStats = statsLogger.getThreadScopedOpStatsLogger(ADD_ENTRY);
-        this.writeThreadQueuedLatency = statsLogger.getThreadScopedOpStatsLogger(WRITE_THREAD_QUEUED_LATENCY);
+        this.addEntryStats = statsLogger.getOpStatsLogger(ADD_ENTRY);
         this.addRequestStats = statsLogger.getOpStatsLogger(ADD_ENTRY_REQUEST);
-        this.addEntryRejectedCounter = statsLogger.getCounter(ADD_ENTRY_REJECTED);
-        this.readEntryStats = statsLogger.getThreadScopedOpStatsLogger(READ_ENTRY);
-        this.readEntryRejectedCounter = statsLogger.getCounter(READ_ENTRY_REJECTED);
+        this.readEntryStats = statsLogger.getOpStatsLogger(READ_ENTRY);
         this.forceLedgerStats = statsLogger.getOpStatsLogger(FORCE_LEDGER);
         this.forceLedgerRequestStats = statsLogger.getOpStatsLogger(FORCE_LEDGER_REQUEST);
         this.readRequestStats = statsLogger.getOpStatsLogger(READ_ENTRY_REQUEST);

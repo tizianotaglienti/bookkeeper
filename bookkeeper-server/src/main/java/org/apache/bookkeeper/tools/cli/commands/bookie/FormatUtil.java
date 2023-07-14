@@ -20,7 +20,7 @@ package org.apache.bookkeeper.tools.cli.commands.bookie;
 
 import io.netty.buffer.ByteBuf;
 import java.util.Formatter;
-import org.apache.bookkeeper.bookie.BookieImpl;
+import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.util.EntryFormatter;
 import org.apache.bookkeeper.util.LedgerIdFormatter;
 import org.slf4j.Logger;
@@ -50,18 +50,19 @@ public class FormatUtil {
         long ledgerId = recBuff.readLong();
         long entryId = recBuff.readLong();
 
-        LOG.info("--------- Lid={}, Eid={}, ByteOffset={}, EntrySize={} ---------",
-            ledgerIdFormatter.formatLedgerId(ledgerId), entryId, pos, entrySize);
-        if (entryId == BookieImpl.METAENTRY_ID_LEDGER_KEY) {
+        LOG.info(
+            "--------- Lid=" + ledgerIdFormatter.formatLedgerId(ledgerId) + ", Eid=" + entryId + ", ByteOffset=" + pos
+                + ", EntrySize=" + entrySize + " ---------");
+        if (entryId == Bookie.METAENTRY_ID_LEDGER_KEY) {
             int masterKeyLen = recBuff.readInt();
             byte[] masterKey = new byte[masterKeyLen];
             recBuff.readBytes(masterKey);
             LOG.info("Type:           META");
-            LOG.info("MasterKey:      {}", bytes2Hex(masterKey));
+            LOG.info("MasterKey:      " + bytes2Hex(masterKey));
             LOG.info("");
             return;
         }
-        if (entryId == BookieImpl.METAENTRY_ID_FENCE_KEY) {
+        if (entryId == Bookie.METAENTRY_ID_FENCE_KEY) {
             LOG.info("Type:           META");
             LOG.info("Fenced");
             LOG.info("");
@@ -70,7 +71,7 @@ public class FormatUtil {
         // process a data entry
         long lastAddConfirmed = recBuff.readLong();
         LOG.info("Type:           DATA");
-        LOG.info("LastConfirmed:  {}", lastAddConfirmed);
+        LOG.info("LastConfirmed:  " + lastAddConfirmed);
         if (!printMsg) {
             LOG.info("");
             return;

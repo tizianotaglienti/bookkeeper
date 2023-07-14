@@ -15,7 +15,6 @@
 package org.apache.bookkeeper.clients.utils;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;

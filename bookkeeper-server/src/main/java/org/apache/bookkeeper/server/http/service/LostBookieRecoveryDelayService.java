@@ -21,6 +21,7 @@ package org.apache.bookkeeper.server.http.service;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.HashMap;
+
 import org.apache.bookkeeper.client.BookKeeperAdmin;
 import org.apache.bookkeeper.common.util.JsonUtil;
 import org.apache.bookkeeper.conf.ServerConfiguration;
@@ -85,9 +86,7 @@ public class LostBookieRecoveryDelayService implements HttpEndpointService {
                 int delaySeconds = bka.getLostBookieRecoveryDelay();
                 response.setCode(HttpServer.StatusCode.OK);
                 response.setBody("lostBookieRecoveryDelay value: " + delaySeconds);
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("response body:" + response.getBody());
-                }
+                LOG.debug("response body:" + response.getBody());
                 return response;
             } catch (Exception e) {
                 // may get noNode exception

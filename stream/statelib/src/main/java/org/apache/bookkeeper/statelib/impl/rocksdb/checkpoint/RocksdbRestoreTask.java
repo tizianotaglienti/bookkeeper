@@ -21,9 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.bookkeeper.statelib.api.checkpoint.CheckpointStore;
 import org.apache.bookkeeper.statelib.api.exceptions.StateStoreException;
@@ -39,26 +37,17 @@ public class RocksdbRestoreTask {
     private final File checkpointDir;
     private final CheckpointStore checkpointStore;
     private final String dbPrefix;
-    private final Duration idleWait;
 
     public RocksdbRestoreTask(String dbName,
                               File checkpointDir,
                               CheckpointStore checkpointStore) {
-        this(dbName, checkpointDir, checkpointStore, Duration.ofMinutes(5));
-    }
-
-    public RocksdbRestoreTask(String dbName,
-                              File checkpointDir,
-                              CheckpointStore checkpointStore,
-                              Duration idleWait) {
         this.dbName = dbName;
         this.checkpointDir = checkpointDir;
         this.checkpointStore = checkpointStore;
         this.dbPrefix = String.format("%s", dbName);
-        this.idleWait = idleWait;
     }
 
-    public void restore(String checkpointId, CheckpointMetadata metadata) throws StateStoreException, TimeoutException {
+    public void restore(String checkpointId, CheckpointMetadata metadata) throws StateStoreException {
         File checkpointedDir = new File(checkpointDir, checkpointId);
 
         try {
@@ -83,9 +72,9 @@ public class RocksdbRestoreTask {
     }
 
     private void copyFilesFromRemote(String checkpointId,
-                                     List<CheckpointFile> remoteFiles) throws IOException, TimeoutException {
+                                     List<CheckpointFile> remoteFiles) throws IOException {
         for (CheckpointFile file : remoteFiles) {
-            file.copyFromRemote(checkpointStore, dbPrefix, checkpointId, idleWait);
+            file.copyFromRemote(checkpointStore, dbPrefix, checkpointId);
         }
     }
 }

@@ -23,8 +23,10 @@ package org.apache.bookkeeper.client;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.client.SyncCallbackUtils.LastAddConfirmedCallback;
 import org.apache.bookkeeper.util.ByteBufList;
+import org.apache.bookkeeper.util.SafeRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,9 +85,9 @@ interface ExplicitLacFlushPolicy {
         }
 
         private void scheduleExplictLacFlush() {
-            final Runnable updateLacTask = new Runnable() {
+            final SafeRunnable updateLacTask = new SafeRunnable() {
                 @Override
-                public void run() {
+                public void safeRun() {
                     // Made progress since previous explicitLAC through
                     // Piggyback, so no need to send an explicit LAC update to
                     // bookies.
@@ -137,10 +139,13 @@ interface ExplicitLacFlushPolicy {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Sending Explicit LAC: {}", explicitLac);
                 }
-                clientCtx.getMainWorkerPool().submit(() -> {
-                    ByteBufList toSend = lh.macManager
-                            .computeDigestAndPackageForSendingLac(lh.getLastAddConfirmed());
-                    op.initiate(toSend);
+                clientCtx.getMainWorkerPool().submit(new SafeRunnable() {
+                    @Override
+                    public void safeRun() {
+                        ByteBufList toSend = lh.macManager
+                                .computeDigestAndPackageForSendingLac(lh.getLastAddConfirmed());
+                        op.initiate(toSend);
+                    }
                 });
             } catch (RejectedExecutionException e) {
                 cb.addLacComplete(BookKeeper.getReturnRc(clientCtx.getBookieClient(),

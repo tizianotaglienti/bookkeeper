@@ -21,8 +21,10 @@
 package org.apache.bookkeeper.proto;
 
 import com.google.protobuf.ByteString;
+import io.netty.channel.Channel;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.GetListOfEntriesOfLedgerRequest;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.GetListOfEntriesOfLedgerResponse;
@@ -43,9 +45,9 @@ public class GetListOfEntriesOfLedgerProcessorV3 extends PacketProcessorBaseV3 i
     protected final GetListOfEntriesOfLedgerRequest getListOfEntriesOfLedgerRequest;
     protected final long ledgerId;
 
-    public GetListOfEntriesOfLedgerProcessorV3(Request request, BookieRequestHandler requestHandler,
+    public GetListOfEntriesOfLedgerProcessorV3(Request request, Channel channel,
             BookieRequestProcessor requestProcessor) {
-        super(request, requestHandler, requestProcessor);
+        super(request, channel, requestProcessor);
         this.getListOfEntriesOfLedgerRequest = request.getGetListOfEntriesOfLedgerRequest();
         this.ledgerId = getListOfEntriesOfLedgerRequest.getLedgerId();
     }
@@ -96,7 +98,7 @@ public class GetListOfEntriesOfLedgerProcessorV3 extends PacketProcessorBaseV3 i
     }
 
     @Override
-    public void run() {
+    public void safeRun() {
         GetListOfEntriesOfLedgerResponse listOfEntriesOfLedgerResponse = getListOfEntriesOfLedgerResponse();
         Response.Builder response = Response.newBuilder().setHeader(getHeader())
                 .setStatus(listOfEntriesOfLedgerResponse.getStatus())

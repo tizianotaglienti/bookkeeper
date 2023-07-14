@@ -154,7 +154,7 @@ public class ReadJournalCommand extends BookieCommand<ReadJournalCommand.ReadJou
             File f = new File(cmd.fileName);
             String name = f.getName();
             if (!name.endsWith(".txn")) {
-                LOG.error("ERROR: invalid journal file name {}", cmd.fileName);
+                LOG.error("ERROR: invalid journal file name " + cmd.fileName);
                 usage();
                 return false;
             }
@@ -174,7 +174,7 @@ public class ReadJournalCommand extends BookieCommand<ReadJournalCommand.ReadJou
         return true;
     }
 
-    private synchronized List<Journal> getJournals(ServerConfiguration conf) throws IOException {
+    private synchronized List<Journal> getJournals(ServerConfiguration conf) {
         if (null == journals) {
             journals = Lists.newArrayListWithCapacity(conf.getJournalDirs().length);
             int idx = 0;
@@ -194,14 +194,14 @@ public class ReadJournalCommand extends BookieCommand<ReadJournalCommand.ReadJou
       * @param printMsg Whether printing the entry data.
       */
     private void scanJournal(Journal journal, long journalId, final boolean printMsg) throws IOException {
-        LOG.info("Scan journal {} ({}.txn)", journalId, Long.toHexString(journalId));
+        LOG.info("Scan journal " + journalId + " (" + Long.toHexString(journalId) + ".txn)");
         scanJournal(journal, journalId, new Journal.JournalScanner() {
             boolean printJournalVersion = false;
 
             @Override
             public void process(int journalVersion, long offset, ByteBuffer entry) throws IOException {
                 if (!printJournalVersion) {
-                    LOG.info("Journal Version : {}", journalVersion);
+                    LOG.info("Journal Version : " + journalVersion);
                     printJournalVersion = true;
                 }
                 FormatUtil
@@ -211,6 +211,6 @@ public class ReadJournalCommand extends BookieCommand<ReadJournalCommand.ReadJou
     }
 
     private void scanJournal(Journal journal, long journalId, Journal.JournalScanner scanner) throws IOException {
-        journal.scanJournal(journalId, 0L, scanner, false);
+        journal.scanJournal(journalId, 0L, scanner);
     }
 }

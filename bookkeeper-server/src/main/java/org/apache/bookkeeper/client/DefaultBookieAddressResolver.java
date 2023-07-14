@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,10 +37,6 @@ public class DefaultBookieAddressResolver implements BookieAddressResolver {
         this.registrationClient = registrationClient;
     }
 
-    public RegistrationClient getRegistrationClient() {
-        return registrationClient;
-    }
-
     @Override
     public BookieSocketAddress resolve(BookieId bookieId) {
         try {
@@ -54,18 +50,16 @@ public class DefaultBookieAddressResolver implements BookieAddressResolver {
             if (!bookieId.toString().equals(res.toString())) {
                 // only print if the information is useful
                 log.info("Resolved {} as {}", bookieId, res);
-            } else if (log.isDebugEnabled()) {
+            } else {
                 log.debug("Resolved {} as {}", bookieId, res);
             }
             return res;
         } catch (BKException.BKBookieHandleNotAvailableException ex) {
             if (BookieSocketAddress.isDummyBookieIdForHostname(bookieId)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Resolving dummy bookie Id {} using legacy bookie resolver", bookieId);
-                }
-                return BookieSocketAddress.resolveLegacyBookieId(bookieId);
+                log.debug("Resolving dummy bookie Id {} using legacy bookie resolver", bookieId);
+                return BookieSocketAddress.resolveDummyBookieId(bookieId);
             }
-            log.info("Cannot resolve {}, bookie is unknown {}", bookieId, ex.toString());
+            log.info("Cannot resolve {}, bookie is unknown", bookieId, ex.toString());
             throw new BookieIdNotResolvedException(bookieId, ex);
         } catch (Exception ex) {
             if (ex instanceof InterruptedException) {

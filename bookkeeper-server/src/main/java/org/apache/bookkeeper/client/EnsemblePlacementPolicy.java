@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.bookkeeper.client.BKException.BKNotEnoughBookiesException;
 import org.apache.bookkeeper.client.BookieInfoReader.BookieInfo;
 import org.apache.bookkeeper.client.DistributionSchedule.WriteSet;
@@ -56,12 +57,11 @@ import org.apache.bookkeeper.stats.StatsLogger;
  *
  * <p>The ensemble placement policy is constructed by jvm reflection during constructing bookkeeper client.
  * After the {@code EnsemblePlacementPolicy} is constructed, bookkeeper client will call
- * {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger,
- * BookieAddressResolver)} to initialize the placement policy.
+ * {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger)} to initialize
+ * the placement policy.
  *
- * <p>The {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger,
- * BookieAddressResolver)} method takes a few resources from bookkeeper for instantiating itself.
- * These resources include:
+ * <p>The {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger)}
+ * method takes a few resources from bookkeeper for instantiating itself. These resources include:
  *
  * <ul>
  * <li>`ClientConfiguration` : The client configuration that used for constructing the bookkeeper client.
@@ -81,8 +81,7 @@ import org.apache.bookkeeper.stats.StatsLogger;
  * <p>The ensemble placement policy is a single instance per bookkeeper client. The instance will
  * be {@link #uninitalize()} when closing the bookkeeper client. The implementation of a placement policy should be
  * responsible for releasing all the resources that allocated during
- * {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger,
- * BookieAddressResolver)}.
+ * {@link #initialize(ClientConfiguration, Optional, HashedWheelTimer, FeatureProvider, StatsLogger)}.
  *
  * <h3>How to choose bookies to place data</h3>
  *
@@ -90,7 +89,8 @@ import org.apache.bookkeeper.stats.StatsLogger;
  * bookie changes, the ensemble placement policy will be notified with new list of bookies via
  * {@link #onClusterChanged(Set, Set)}. The implementation of the ensemble placement policy will react on those
  * changes to build new network topology. Subsequent operations like {@link #newEnsemble(int, int, int, Map, Set)} or
- * {@link #replaceBookie(int, int, int, java.util.Map, java.util.List, BookieId, java.util.Set)}
+ * {@link #replaceBookie(int, int, int, java.util.Map, java.util.Set,
+ * org.apache.bookkeeper.net.BookieSocketAddress, java.util.Set)}
  * hence can operate on the new
  * network topology.
  *
@@ -231,7 +231,8 @@ public interface EnsemblePlacementPolicy {
      *
      * <p>The implementation should take actions when the cluster view is changed. So subsequent
      * {@link #newEnsemble(int, int, int, Map, Set)} and
-     * {@link #replaceBookie(int, int, int, java.util.Map, java.util.List, BookieId, java.util.Set) }
+     * {@link #replaceBookie(int, int, int, java.util.Map, java.util.Set,
+     * org.apache.bookkeeper.net.BookieSocketAddress, java.util.Set) }
      * can choose proper bookies.
      *
      * @param writableBookies
@@ -441,31 +442,6 @@ public interface EnsemblePlacementPolicy {
     }
 
     /**
-     * Returns placement result. If the currentEnsemble is not adhering placement policy, returns new ensemble that
-     * adheres placement policy. It should be implemented so as to minify the number of bookies replaced.
-     *
-     * @param ensembleSize
-     *            ensemble size
-     * @param writeQuorumSize
- *                writeQuorumSize of the ensemble
-     * @param ackQuorumSize
-     *            ackQuorumSize of the ensemble
-     * @param excludeBookies
-     *            bookies that should not be considered as targets
-     * @param currentEnsemble
-     *            current ensemble
-     * @return a placement result
-     */
-    default PlacementResult<List<BookieId>> replaceToAdherePlacementPolicy(
-            int ensembleSize,
-            int writeQuorumSize,
-            int ackQuorumSize,
-            Set<BookieId> excludeBookies,
-            List<BookieId> currentEnsemble) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
      * enum for PlacementPolicyAdherence. Currently we are supporting tri-value
      * enum for PlacementPolicyAdherence. If placement policy is met strictly
      * then it is MEETS_STRICT, if it doesn't adhere to placement policy then it
@@ -506,15 +482,7 @@ public interface EnsemblePlacementPolicy {
             return result;
         }
 
-        /**
-         * Use {@link #getAdheringToPolicy}.
-         */
-        @Deprecated
         public PlacementPolicyAdherence isAdheringToPolicy() {
-            return policyAdherence;
-        }
-
-        public PlacementPolicyAdherence getAdheringToPolicy() {
             return policyAdherence;
         }
     }

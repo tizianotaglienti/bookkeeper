@@ -19,6 +19,7 @@
 package org.apache.bookkeeper.bookie;
 
 import java.util.concurrent.Future;
+
 /**
  * State management of Bookie, including register, turn bookie to w/r mode.
  */
@@ -47,11 +48,6 @@ public interface StateManager extends AutoCloseable {
      * Check is ReadOnly.
      */
     boolean isReadOnly();
-
-    /**
-     * Check is forceReadOnly.
-     */
-    boolean isForceReadOnly();
 
     /**
      * Check is Running.

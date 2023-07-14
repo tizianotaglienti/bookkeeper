@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.util.List;
+
 import org.apache.bookkeeper.conf.AbstractConfiguration;
-import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.meta.zk.ZKMetadataDriverBase;
 import org.apache.bookkeeper.replication.ReplicationException;
-import org.apache.bookkeeper.stats.NullStatsLogger;
 import org.apache.bookkeeper.util.ZkUtils;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 
 /**
@@ -84,14 +84,7 @@ public class FlatLedgerManagerFactory extends AbstractZkLedgerManagerFactory {
 
     @Override
     public LedgerUnderreplicationManager newLedgerUnderreplicationManager()
-            throws ReplicationException.UnavailableException, InterruptedException,
-            ReplicationException.CompatibilityException {
+            throws KeeperException, InterruptedException, ReplicationException.CompatibilityException {
         return new ZkLedgerUnderreplicationManager(conf, zk);
-    }
-
-    @Override
-    public LedgerAuditorManager newLedgerAuditorManager() {
-        ServerConfiguration serverConfiguration = new ServerConfiguration(conf);
-        return new ZkLedgerAuditorManager(zk, serverConfiguration, NullStatsLogger.INSTANCE);
     }
 }

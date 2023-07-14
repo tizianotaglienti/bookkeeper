@@ -22,6 +22,7 @@
 package org.apache.bookkeeper.bookie;
 
 import java.io.IOException;
+
 import org.apache.bookkeeper.bookie.LedgerStorage.LedgerDeletionListener;
 import org.apache.bookkeeper.util.collections.ConcurrentLongHashMap;
 
@@ -33,8 +34,8 @@ class HandleFactoryImpl implements HandleFactory, LedgerDeletionListener {
 
     HandleFactoryImpl(LedgerStorage ledgerStorage) {
         this.ledgerStorage = ledgerStorage;
-        this.ledgers = ConcurrentLongHashMap.<LedgerDescriptor>newBuilder().build();
-        this.readOnlyLedgers = ConcurrentLongHashMap.<LedgerDescriptor>newBuilder().build();
+        this.ledgers = new ConcurrentLongHashMap<>();
+        this.readOnlyLedgers = new ConcurrentLongHashMap<>();
 
         ledgerStorage.registerLedgerDeletionListener(this);
     }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,17 +18,21 @@
 package org.apache.bookkeeper.proto;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.util.ReferenceCountUtil;
+
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.Bookie;
 import org.apache.bookkeeper.bookie.BookieException;
-import org.apache.bookkeeper.common.concurrent.FutureEventListener;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.ReadRequest;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.ReadResponse;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.Request;
@@ -46,7 +50,7 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
     protected Stopwatch lastPhaseStartTime;
     private final ExecutorService fenceThreadPool;
 
-    private CompletableFuture<Boolean> fenceResult = null;
+    private SettableFuture<Boolean> fenceResult = null;
 
     protected final ReadRequest readRequest;
     protected final long ledgerId;
@@ -57,11 +61,11 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
     protected final OpStatsLogger reqStats;
 
     public ReadEntryProcessorV3(Request request,
-                                BookieRequestHandler requestHandler,
+                                Channel channel,
                                 BookieRequestProcessor requestProcessor,
                                 ExecutorService fenceThreadPool) {
-        super(request, requestHandler, requestProcessor);
-        requestProcessor.onReadRequestStart(requestHandler.ctx().channel());
+        super(request, channel, requestProcessor);
+        requestProcessor.onReadRequestStart(channel);
 
         this.readRequest = request.getReadRequest();
         this.ledgerId = readRequest.getLedgerId();
@@ -109,7 +113,7 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
         // reset last phase start time to measure fence result waiting time
         lastPhaseStartTime.reset().start();
         if (null != fenceThreadPool) {
-            fenceResult.whenCompleteAsync(new FutureEventListener<Boolean>() {
+            Futures.addCallback(fenceResult, new FutureCallback<Boolean>() {
                 @Override
                 public void onSuccess(Boolean result) {
                     sendFenceResponse(readResponseBuilder, entryBody, result, startTimeSw);
@@ -149,7 +153,7 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
     protected ReadResponse readEntry(ReadResponse.Builder readResponseBuilder,
                                      long entryId,
                                      Stopwatch startTimeSw)
-        throws IOException, BookieException {
+        throws IOException {
         return readEntry(readResponseBuilder, entryId, false, startTimeSw);
     }
 
@@ -169,7 +173,7 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
                                      long entryId,
                                      boolean readLACPiggyBack,
                                      Stopwatch startTimeSw)
-        throws IOException, BookieException {
+        throws IOException {
         ByteBuf entryBody = requestProcessor.getBookie().readEntry(ledgerId, entryId);
         if (null != fenceResult) {
             handleReadResultForFenceRead(entryBody, readResponseBuilder, entryId, startTimeSw);
@@ -194,7 +198,6 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
 
     protected ReadResponse getReadResponse() {
         final Stopwatch startTimeSw = Stopwatch.createStarted();
-        final Channel channel = requestHandler.ctx().channel();
 
         final ReadResponse.Builder readResponse = ReadResponse.newBuilder()
             .setLedgerId(ledgerId)
@@ -233,11 +236,6 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
         } catch (IOException e) {
             LOG.error("IOException while reading entry: {} from ledger {} ", entryId, ledgerId, e);
             return buildResponse(readResponse, StatusCode.EIO, startTimeSw);
-        } catch (BookieException.DataUnknownException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Ledger has unknown state for entry: {} from ledger {}", entryId, ledgerId);
-            }
-            return buildResponse(readResponse, StatusCode.EUNKNOWNLEDGERSTATE, startTimeSw);
         } catch (BookieException e) {
             LOG.error(
                 "Unauthorized access to ledger:{} while reading entry:{} in request from address: {}",
@@ -247,16 +245,9 @@ class ReadEntryProcessorV3 extends PacketProcessorBaseV3 {
     }
 
     @Override
-    public void run() {
+    public void safeRun() {
         requestProcessor.getRequestStats().getReadEntrySchedulingDelayStats().registerSuccessfulEvent(
             MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
-        if (!requestHandler.ctx().channel().isOpen()) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Dropping read request for closed channel: {}", requestHandler.ctx().channel());
-            }
-            requestProcessor.onReadRequestFinish();
-            return;
-        }
 
         if (!isVersionCompatible()) {
             ReadResponse readResponse = ReadResponse.newBuilder()

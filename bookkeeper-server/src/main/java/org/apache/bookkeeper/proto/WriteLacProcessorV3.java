@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,9 +21,12 @@
 package org.apache.bookkeeper.proto;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.bookkeeper.bookie.BookieException;
 import org.apache.bookkeeper.net.BookieId;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.Request;
@@ -39,9 +42,9 @@ import org.slf4j.LoggerFactory;
 class WriteLacProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(WriteLacProcessorV3.class);
 
-    public WriteLacProcessorV3(Request request, BookieRequestHandler requestHandler,
+    public WriteLacProcessorV3(Request request, Channel channel,
                              BookieRequestProcessor requestProcessor) {
-        super(request, requestHandler, requestProcessor);
+        super(request, channel, requestProcessor);
     }
 
     // Returns null if there is no exception thrown
@@ -102,8 +105,7 @@ class WriteLacProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
         byte[] masterKey = writeLacRequest.getMasterKey().toByteArray();
 
         try {
-            requestProcessor.bookie.setExplicitLac(Unpooled.wrappedBuffer(lacToAdd),
-                    writeCallback, requestHandler, masterKey);
+            requestProcessor.bookie.setExplicitLac(Unpooled.wrappedBuffer(lacToAdd), writeCallback, channel, masterKey);
             status = StatusCode.EOK;
         } catch (IOException e) {
             logger.error("Error saving lac {} for ledger:{}",
@@ -137,7 +139,7 @@ class WriteLacProcessorV3 extends PacketProcessorBaseV3 implements Runnable {
     }
 
     @Override
-    public void run() {
+    public void safeRun() {
         WriteLacResponse writeLacResponse = getWriteLacResponse();
         if (null != writeLacResponse) {
             Response.Builder response = Response.newBuilder()

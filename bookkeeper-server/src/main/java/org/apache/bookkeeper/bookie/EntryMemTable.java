@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.bookkeeper.bookie.Bookie.NoLedgerException;
 import org.apache.bookkeeper.bookie.CheckpointSource.Checkpoint;
 import org.apache.bookkeeper.bookie.stats.EntryMemTableStats;
@@ -258,7 +259,7 @@ public class EntryMemTable implements AutoCloseable{
                             }
                         }
                     }
-                    memTableStats.getFlushBytesCounter().addCount(size);
+                    memTableStats.getFlushBytesCounter().add(size);
                     clearSnapshot(keyValues);
                 }
             }
@@ -319,9 +320,6 @@ public class EntryMemTable implements AutoCloseable{
             try {
                 EntryKeyValue toAdd = cloneWithAllocator(ledgerId, entryId, entry);
                 size = internalAdd(toAdd);
-                if (size == 0) {
-                    skipListSemaphore.release(len);
-                }
             } finally {
                 this.lock.readLock().unlock();
             }

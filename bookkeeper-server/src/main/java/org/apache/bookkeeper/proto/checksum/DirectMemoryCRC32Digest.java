@@ -18,9 +18,11 @@
 package org.apache.bookkeeper.proto.checksum;
 
 import io.netty.buffer.ByteBuf;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.zip.CRC32;
+
 import org.apache.bookkeeper.proto.checksum.CRC32DigestManager.CRC32Digest;
 
 /**
@@ -43,7 +45,10 @@ class DirectMemoryCRC32Digest implements CRC32Digest {
     }
 
     @Override
-    public void update(ByteBuf buf, int index, int length) {
+    public void update(ByteBuf buf) {
+        int index = buf.readerIndex();
+        int length = buf.readableBytes();
+
         try {
             if (buf.hasMemoryAddress()) {
                 // Calculate CRC directly from the direct memory pointer
@@ -78,7 +83,7 @@ class DirectMemoryCRC32Digest implements CRC32Digest {
             updateBytesMethod = CRC32.class.getDeclaredMethod("updateBytes", int.class, byte[].class, int.class,
                     int.class);
             updateBytesMethod.setAccessible(true);
-        } catch (Throwable e) {
+        } catch (NoSuchMethodException | SecurityException e) {
             updateByteBufferMethod = null;
             updateBytesMethod = null;
         }

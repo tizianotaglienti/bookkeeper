@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,30 +24,30 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import java.util.concurrent.TimeUnit;
-import lombok.extern.slf4j.Slf4j;
+
 import org.apache.bookkeeper.proto.BookkeeperProtocol.BKPacketHeader;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.ProtocolVersion;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.Request;
 import org.apache.bookkeeper.proto.BookkeeperProtocol.StatusCode;
 import org.apache.bookkeeper.stats.OpStatsLogger;
 import org.apache.bookkeeper.util.MathUtils;
+import org.apache.bookkeeper.util.SafeRunnable;
 import org.apache.bookkeeper.util.StringUtils;
 
 /**
  * A base class for bookkeeper protocol v3 packet processors.
  */
-@Slf4j
-public abstract class PacketProcessorBaseV3 implements Runnable {
+public abstract class PacketProcessorBaseV3 extends SafeRunnable {
 
     final Request request;
-    final BookieRequestHandler requestHandler;
+    final Channel channel;
     final BookieRequestProcessor requestProcessor;
     final long enqueueNanos;
 
-    public PacketProcessorBaseV3(Request request, BookieRequestHandler requestHandler,
+    public PacketProcessorBaseV3(Request request, Channel channel,
                                  BookieRequestProcessor requestProcessor) {
         this.request = request;
-        this.requestHandler = requestHandler;
+        this.channel = channel;
         this.requestProcessor = requestProcessor;
         this.enqueueNanos = MathUtils.nowInNano();
     }
@@ -55,7 +55,6 @@ public abstract class PacketProcessorBaseV3 implements Runnable {
     protected void sendResponse(StatusCode code, Object response, OpStatsLogger statsLogger) {
         final long writeNanos = MathUtils.nowInNano();
 
-        Channel channel = requestHandler.ctx().channel();
         final long timeOut = requestProcessor.getWaitTimeoutOnBackpressureMillis();
         if (timeOut >= 0 && !channel.isWritable()) {
             if (!requestProcessor.isBlacklisted(channel)) {
@@ -78,7 +77,7 @@ public abstract class PacketProcessorBaseV3 implements Runnable {
             }
 
             if (!channel.isWritable()) {
-                log.warn("cannot write response to non-writable channel {} for request {}", channel,
+                LOGGER.warn("cannot write response to non-writable channel {} for request {}", channel,
                         StringUtils.requestToString(request));
                 requestProcessor.getRequestStats().getChannelWriteStats()
                         .registerFailedEvent(MathUtils.elapsedNanos(writeNanos), TimeUnit.NANOSECONDS);
@@ -88,29 +87,25 @@ public abstract class PacketProcessorBaseV3 implements Runnable {
                 requestProcessor.invalidateBlacklist(channel);
             }
         }
-        if (channel.isActive()) {
-            channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    long writeElapsedNanos = MathUtils.elapsedNanos(writeNanos);
-                    if (!future.isSuccess()) {
-                        requestProcessor.getRequestStats().getChannelWriteStats()
-                                .registerFailedEvent(writeElapsedNanos, TimeUnit.NANOSECONDS);
-                    } else {
-                        requestProcessor.getRequestStats().getChannelWriteStats()
-                                .registerSuccessfulEvent(writeElapsedNanos, TimeUnit.NANOSECONDS);
-                    }
-                    if (StatusCode.EOK == code) {
-                        statsLogger.registerSuccessfulEvent(MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
-                    } else {
-                        statsLogger.registerFailedEvent(MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
-                    }
+
+        channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                long writeElapsedNanos = MathUtils.elapsedNanos(writeNanos);
+                if (!future.isSuccess()) {
+                    requestProcessor.getRequestStats().getChannelWriteStats()
+                        .registerFailedEvent(writeElapsedNanos, TimeUnit.NANOSECONDS);
+                } else {
+                    requestProcessor.getRequestStats().getChannelWriteStats()
+                        .registerSuccessfulEvent(writeElapsedNanos, TimeUnit.NANOSECONDS);
                 }
-            });
-        } else {
-            log.debug("Netty channel {} is inactive, "
-                    + "hence bypassing netty channel writeAndFlush during sendResponse", channel);
-        }
+                if (StatusCode.EOK == code) {
+                    statsLogger.registerSuccessfulEvent(MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
+                } else {
+                    statsLogger.registerFailedEvent(MathUtils.elapsedNanos(enqueueNanos), TimeUnit.NANOSECONDS);
+                }
+            }
+        });
     }
 
     protected boolean isVersionCompatible() {

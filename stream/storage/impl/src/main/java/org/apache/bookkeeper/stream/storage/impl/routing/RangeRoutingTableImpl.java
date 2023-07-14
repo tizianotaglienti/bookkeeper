@@ -43,9 +43,8 @@ public class RangeRoutingTableImpl implements RangeRoutingTable {
 
     public RangeRoutingTableImpl(StorageServerClientManager manager) {
         this.manager = manager;
-        this.ranges = ConcurrentLongHashMap.<RangeRouter<byte[]>>newBuilder().build();
-        this.outstandingUpdates =
-                ConcurrentLongHashMap.<CompletableFuture<RangeRouter<byte[]>>>newBuilder().build();
+        this.ranges = new ConcurrentLongHashMap<>();
+        this.outstandingUpdates = new ConcurrentLongHashMap<>();
     }
 
     @VisibleForTesting

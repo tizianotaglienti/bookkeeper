@@ -22,7 +22,6 @@ import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import lombok.AccessLevel;
@@ -43,7 +42,6 @@ final class MVCCRecordCoder implements Coder<MVCCRecord> {
 
     private static final MVCCRecordCoder INSTANCE = new MVCCRecordCoder();
 
-
     @Override
     public byte[] encode(MVCCRecord record) {
         KeyMeta meta = KeyMeta.newBuilder()
@@ -51,7 +49,6 @@ final class MVCCRecordCoder implements Coder<MVCCRecord> {
             .setModRevision(record.getModRev())
             .setVersion(record.getVersion())
             .setValueType(record.getValueType())
-            .setExpireTime(record.getExpireTime())
             .build();
         int metaLen = meta.getSerializedSize();
         int valLen = record.getValue().readableBytes();
@@ -77,7 +74,7 @@ final class MVCCRecordCoder implements Coder<MVCCRecord> {
         buf.writerIndex(buf.writerIndex() + metaLen);
         buf.writeInt(valLen);
         buf.writeBytes(record.getValue().slice());
-        ReferenceCountUtil.release(buf);
+        buf.release();
 
         return data;
     }
@@ -94,7 +91,6 @@ final class MVCCRecordCoder implements Coder<MVCCRecord> {
             .setModRevision(record.getModRev())
             .setVersion(record.getVersion())
             .setValueType(record.getValueType())
-            .setExpireTime(record.getExpireTime())
             .build();
         int metaLen = meta.getSerializedSize();
         int valLen = record.getValue().readableBytes();
@@ -125,7 +121,6 @@ final class MVCCRecordCoder implements Coder<MVCCRecord> {
         record.setCreateRev(meta.getCreateRevision());
         record.setModRev(meta.getModRevision());
         record.setVersion(meta.getVersion());
-        record.setExpireTime(meta.getExpireTime());
         record.setValue(valBuf, meta.getValueType());
         return record;
     }

@@ -16,6 +16,7 @@
 package com.scurrilous.circe.crc;
 
 import java.util.EnumSet;
+
 import com.scurrilous.circe.Hash;
 import com.scurrilous.circe.HashSupport;
 import com.scurrilous.circe.StatelessHash;

@@ -17,20 +17,25 @@
  */
 package org.apache.bookkeeper.tests.integration.utils;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.github.dockerjava.api.DockerClient;
-import java.util.Arrays;
-import java.util.List;
+
+import java.io.IOException;
+import java.net.Socket;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import lombok.Cleanup;
-import lombok.SneakyThrows;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,22 +43,7 @@ import org.slf4j.LoggerFactory;
  * Utils for interacting a bookkeeper cluster used for integration tests.
  */
 public class BookKeeperClusterUtils {
-    public static final String CURRENT_VERSION = System.getProperty("currentVersion");
-    public static final List<String> OLD_CLIENT_VERSIONS =
-            Arrays.asList("4.8.2", "4.9.2", "4.10.0", "4.11.1", "4.12.1", "4.13.0", "4.14.4");
-    private static final List<String> OLD_CLIENT_VERSIONS_WITH_CURRENT_LEDGER_METADATA_FORMAT =
-            Arrays.asList("4.9.2", "4.10.0", "4.11.1", "4.12.1", "4.13.0", "4.14.4");
-
-
-    private static final List<String> OLD_CLIENT_VERSIONS_WITH_OLD_BK_BIN_NAME =
-            Arrays.asList("4.9.2", "4.10.0", "4.11.1", "4.12.1", "4.13.0", "4.14.3", "4.3-yahoo");
-
-
     private static final Logger LOG = LoggerFactory.getLogger(BookKeeperClusterUtils.class);
-
-    public static boolean hasVersionLatestMetadataFormat(String version) {
-        return OLD_CLIENT_VERSIONS_WITH_CURRENT_LEDGER_METADATA_FORMAT.contains(version);
-    }
 
     public static String zookeeperConnectString(DockerClient docker) {
         return DockerUtils.cubeIdsMatching("zookeeper").stream()
@@ -73,19 +63,22 @@ public class BookKeeperClusterUtils {
         return zk;
     }
 
-    @SneakyThrows
     public static boolean zookeeperRunning(DockerClient docker, String containerId) {
         String ip = DockerUtils.getContainerIP(docker, containerId);
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        @Cleanup
-        ZooKeeper zk = new ZooKeeper(ip + ":2181", 10000,
-                (e) -> {
-                    if (e.getState().equals(KeeperState.SyncConnected)) {
-                        future.complete(null);
-                    }
-                });
-        future.get();
-        return true;
+        return zookeeperRunning(ip, 2181);
+    }
+    public static boolean zookeeperRunning(String ip, int port) {
+        try (Socket socket = new Socket(ip, port)) {
+            socket.setSoTimeout(1000);
+            socket.getOutputStream().write("ruok".getBytes(UTF_8));
+            byte[] resp = new byte[4];
+            if (socket.getInputStream().read(resp) == 4) {
+                return new String(resp, UTF_8).equals("imok");
+            }
+        } catch (IOException e) {
+            // ignore, we'll return fallthrough to return false
+        }
+        return false;
     }
 
     public static void legacyMetadataFormat(DockerClient docker) throws Exception {
@@ -99,7 +92,7 @@ public class BookKeeperClusterUtils {
         @Cleanup
         ZooKeeper zk = BookKeeperClusterUtils.zookeeperClient(docker);
         if (zk.exists("/ledgers", false) == null) {
-            String bookkeeper = "/opt/bookkeeper/" + version + "/bin/" + computeBinFilenameByVersion(version);
+            String bookkeeper = "/opt/bookkeeper/" + version + "/bin/bookkeeper";
             runOnAnyBookie(docker, bookkeeper, "shell", "metaformat", "-nonInteractive");
             return true;
         } else {
@@ -129,7 +122,7 @@ public class BookKeeperClusterUtils {
     }
 
     public static void formatAllBookies(DockerClient docker, String version) throws Exception {
-        String bookkeeper = "/opt/bookkeeper/" + version + "/bin/" + computeBinFilenameByVersion(version);
+        String bookkeeper = "/opt/bookkeeper/" + version + "/bin/bookkeeper";
         BookKeeperClusterUtils.runOnAllBookies(docker, bookkeeper, "shell", "bookieformat", "-nonInteractive");
     }
 
@@ -256,12 +249,5 @@ public class BookKeeperClusterUtils {
         return allBookies().stream()
             .map((b) -> waitBookieUp(docker, b, 10, TimeUnit.SECONDS))
             .reduce(true, BookKeeperClusterUtils::allTrue);
-    }
-
-    private static String computeBinFilenameByVersion(String version) {
-        if (OLD_CLIENT_VERSIONS_WITH_OLD_BK_BIN_NAME.contains(version)) {
-            return "bookkeeper";
-        }
-        return "bookkeeper_gradle";
     }
 }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.apache.distributedlog.LogRecordSet.METADATA_VERSION_MASK;
 import static org.apache.distributedlog.LogRecordSet.VERSION;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.ReferenceCountUtil;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.distributedlog.io.CompressionCodec;
@@ -81,10 +80,10 @@ class EnvelopedRecordSetReader implements LogRecordSet.Reader {
             CompressionCodec codec = CompressionUtils.getCompressionCodec(Type.of(codecCode));
             this.reader = codec.decompress(compressedBuf, decompressedDataLen);
         } finally {
-            ReferenceCountUtil.release(compressedBuf);
+            compressedBuf.release();
         }
         if (numRecords == 0) {
-            ReferenceCountUtil.release(this.reader);
+            this.reader.release();
         }
     }
 
@@ -111,7 +110,7 @@ class EnvelopedRecordSetReader implements LogRecordSet.Reader {
 
         // release the record set buffer when exhausting the reader
         if (0 == numRecords) {
-            ReferenceCountUtil.release(this.reader);
+            this.reader.release();
         }
 
         return record;
@@ -121,7 +120,7 @@ class EnvelopedRecordSetReader implements LogRecordSet.Reader {
     public void release() {
         if (0 != numRecords) {
             numRecords = 0;
-            ReferenceCountUtil.release(reader);
+            reader.release();
         }
     }
 }

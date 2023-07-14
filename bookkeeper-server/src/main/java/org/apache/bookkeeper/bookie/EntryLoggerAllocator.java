@@ -1,4 +1,4 @@
-/*
+/**
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,6 +27,7 @@ import static org.apache.bookkeeper.bookie.TransactionalEntryLogCompactor.COMPAC
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,9 +42,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
 import lombok.extern.slf4j.Slf4j;
-import org.apache.bookkeeper.bookie.DefaultEntryLogger.BufferedLogChannel;
+import org.apache.bookkeeper.bookie.EntryLogger.BufferedLogChannel;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 
 /**
@@ -59,14 +60,14 @@ class EntryLoggerAllocator {
     private final LedgerDirsManager ledgerDirsManager;
     private final Object createEntryLogLock = new Object();
     private final Object createCompactionLogLock = new Object();
-    private final DefaultEntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus;
+    private final EntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus;
     private final boolean entryLogPreAllocationEnabled;
     private final ByteBufAllocator byteBufAllocator;
-    final ByteBuf logfileHeader = Unpooled.buffer(DefaultEntryLogger.LOGFILE_HEADER_SIZE);
+    final ByteBuf logfileHeader = Unpooled.buffer(EntryLogger.LOGFILE_HEADER_SIZE);
 
     EntryLoggerAllocator(ServerConfiguration conf, LedgerDirsManager ledgerDirsManager,
-                         DefaultEntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus, long logId,
-                         ByteBufAllocator byteBufAllocator) {
+            EntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus, long logId,
+            ByteBufAllocator byteBufAllocator) {
         this.conf = conf;
         this.byteBufAllocator = byteBufAllocator;
         this.ledgerDirsManager = ledgerDirsManager;
@@ -81,8 +82,8 @@ class EntryLoggerAllocator {
         // so there can be race conditions when entry logs are rolled over and
         // this header buffer is cleared before writing it into the new logChannel.
         logfileHeader.writeBytes("BKLO".getBytes(UTF_8));
-        logfileHeader.writeInt(DefaultEntryLogger.HEADER_CURRENT_VERSION);
-        logfileHeader.writerIndex(DefaultEntryLogger.LOGFILE_HEADER_SIZE);
+        logfileHeader.writeInt(EntryLogger.HEADER_CURRENT_VERSION);
+        logfileHeader.writerIndex(EntryLogger.LOGFILE_HEADER_SIZE);
 
     }
 
@@ -173,30 +174,12 @@ class EntryLoggerAllocator {
             setLastLogId(f, preallocatedLogId);
         }
 
-        if (suffix.equals(DefaultEntryLogger.LOG_FILE_SUFFIX)) {
+        if (suffix.equals(EntryLogger.LOG_FILE_SUFFIX)) {
             recentlyCreatedEntryLogsStatus.createdEntryLog(preallocatedLogId);
         }
 
         log.info("Created new entry log file {} for logId {}.", newLogFile, preallocatedLogId);
         return logChannel;
-    }
-
-
-    private synchronized void closePreAllocateLog() {
-        if (preallocation != null) {
-            // if preallocate new log success, release the file channel
-            try {
-                BufferedLogChannel bufferedLogChannel = getPreallocationFuture().get(3, TimeUnit.SECONDS);
-                if (bufferedLogChannel != null) {
-                    bufferedLogChannel.close();
-                }
-            } catch (InterruptedException e) {
-                log.warn("interrupted while release preAllocate log");
-                Thread.currentThread().interrupt();
-            } catch (IOException | ExecutionException | TimeoutException e) {
-                log.warn("release preAllocate log failed, ignore error");
-            }
-        }
     }
 
     /**
@@ -225,7 +208,6 @@ class EntryLoggerAllocator {
      */
     void stop() {
         // wait until the preallocation finished.
-        allocatorExecutor.execute(this::closePreAllocateLog);
         allocatorExecutor.shutdown();
         try {
             if (!allocatorExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -236,6 +218,7 @@ class EntryLoggerAllocator {
             Thread.currentThread().interrupt();
         }
         allocatorExecutor.shutdownNow();
+
         log.info("Stopped entry logger preallocator.");
     }
 

@@ -21,8 +21,8 @@
 package org.apache.bookkeeper.util;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,6 +33,7 @@ import io.netty.util.Recycler;
 import io.netty.util.Recycler.Handle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+
 import java.util.ArrayList;
 
 /**
@@ -42,6 +43,8 @@ import java.util.ArrayList;
  * will need to be encoded on the channel. There are 2 utility encoders:
  * <ul>
  * <li>{@link #ENCODER}: regular encode that will write all the buffers in the {@link ByteBufList} on the channel</li>
+ * <li>{@link #ENCODER_WITH_SIZE}: similar to the previous one, but also prepend a 4 bytes size header, once, carrying
+ * the size of the readable bytes across all the buffers contained in the {@link ByteBufList}</li>
  * </ul>
  *
  * <p>Example:
@@ -133,43 +136,14 @@ public class ByteBufList extends AbstractReferenceCounted {
      * Append a {@link ByteBuf} at the end of this {@link ByteBufList}.
      */
     public void add(ByteBuf buf) {
-        final ByteBuf unwrapped = buf.unwrap() != null && buf.unwrap() instanceof CompositeByteBuf
-                ? buf.unwrap() : buf;
-        ReferenceCountUtil.retain(unwrapped);
-        ReferenceCountUtil.release(buf);
-
-        if (unwrapped instanceof CompositeByteBuf) {
-            ((CompositeByteBuf) unwrapped).forEach(b -> {
-                ReferenceCountUtil.retain(b);
-                buffers.add(b);
-            });
-            ReferenceCountUtil.release(unwrapped);
-        } else {
-            buffers.add(unwrapped);
-        }
+        buffers.add(buf);
     }
 
     /**
      * Prepend a {@link ByteBuf} at the beginning of this {@link ByteBufList}.
      */
     public void prepend(ByteBuf buf) {
-        // don't unwrap slices
-        final ByteBuf unwrapped = buf.unwrap() != null && buf.unwrap() instanceof CompositeByteBuf
-                ? buf.unwrap() : buf;
-        ReferenceCountUtil.retain(unwrapped);
-        ReferenceCountUtil.release(buf);
-
-        if (unwrapped instanceof CompositeByteBuf) {
-            CompositeByteBuf composite = (CompositeByteBuf) unwrapped;
-            for (int i = composite.numComponents() - 1; i >= 0; i--) {
-                ByteBuf b = composite.component(i);
-                ReferenceCountUtil.retain(b);
-                buffers.add(0, b);
-            }
-            ReferenceCountUtil.release(unwrapped);
-        } else {
-            buffers.add(0, unwrapped);
-        }
+        buffers.add(0, buf);
     }
 
     /**
@@ -285,7 +259,7 @@ public class ByteBufList extends AbstractReferenceCounted {
     @Override
     protected void deallocate() {
         for (int i = 0; i < buffers.size(); i++) {
-            ReferenceCountUtil.release(buffers.get(i));
+            buffers.get(i).release();
         }
 
         buffers.clear();
@@ -303,7 +277,13 @@ public class ByteBufList extends AbstractReferenceCounted {
     /**
      * Encoder for the {@link ByteBufList} that doesn't prepend any size header.
      */
-    public static final Encoder ENCODER = new Encoder();
+    public static final Encoder ENCODER = new Encoder(false);
+
+    /**
+     * Encoder for the {@link ByteBufList} that will prepend a 4 byte header with the size of the whole
+     * {@link ByteBufList} readable bytes.
+     */
+    public static final Encoder ENCODER_WITH_SIZE = new Encoder(true);
 
     /**
      * {@link ByteBufList} encoder.
@@ -311,12 +291,26 @@ public class ByteBufList extends AbstractReferenceCounted {
     @Sharable
     public static class Encoder extends ChannelOutboundHandlerAdapter {
 
+        private final boolean prependSize;
+
+        public Encoder(boolean prependSize) {
+            this.prependSize = prependSize;
+        }
+
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
             if (msg instanceof ByteBufList) {
                 ByteBufList b = (ByteBufList) msg;
 
                 try {
+                    if (prependSize) {
+                        // Prepend the frame size before writing the buffer list, so that we only have 1 single size
+                        // header
+                        ByteBuf sizeBuffer = ctx.alloc().directBuffer(4, 4);
+                        sizeBuffer.writeInt(b.readableBytes());
+                        ctx.write(sizeBuffer, ctx.voidPromise());
+                    }
+
                     // Write each buffer individually on the socket. The retain() here is needed to preserve the fact
                     // that ByteBuf are automatically released after a write. If the ByteBufPair ref count is increased
                     // and it gets written multiple times, the individual buffers refcount should be reflected as well.
@@ -328,7 +322,7 @@ public class ByteBufList extends AbstractReferenceCounted {
                         ctx.write(bx.retainedDuplicate(), i == (buffersCount - 1) ? promise : ctx.voidPromise());
                     }
                 } finally {
-                    ReferenceCountUtil.release(b);
+                    ReferenceCountUtil.safeRelease(b);
                 }
             } else {
                 ctx.write(msg, promise);

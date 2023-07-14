@@ -25,6 +25,7 @@ import static io.etcd.jetcd.common.exception.EtcdExceptionFactory.toEtcdExceptio
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.UnsafeByteOperations;
+
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.EtcdConnectionManager;
@@ -38,6 +39,7 @@ import io.etcd.jetcd.common.exception.EtcdException;
 import io.etcd.jetcd.common.exception.EtcdExceptionFactory;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchResponseWithError;
+
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
@@ -64,9 +66,9 @@ public class EtcdWatchClient implements AutoCloseable {
     private volatile StreamObserver<WatchRequest> grpcWatchStreamObserver;
     // watchers stores a mapping between watchID -> EtcdWatcher.
     private final ConcurrentLongHashMap<EtcdWatcher> watchers =
-            ConcurrentLongHashMap.<EtcdWatcher>newBuilder().build();
+        new ConcurrentLongHashMap<>();
     private final LinkedList<EtcdWatcher> pendingWatchers = new LinkedList<>();
-    private final ConcurrentLongHashSet cancelSet = ConcurrentLongHashSet.newBuilder().build();
+    private final ConcurrentLongHashSet cancelSet = new ConcurrentLongHashSet();
 
     // scheduler
     private final OrderedScheduler scheduler;
