@@ -199,6 +199,12 @@
     <spotbugs-maven-plugin.version>3.1.8</spotbugs-maven-plugin.version>
     <forkCount.variable>1</forkCount.variable>
     <servlet-api.version>4.0.0</servlet-api.version>
+    <sonar.projectKey>tizianotaglienti:${project.groupId}:${project.artifactId}</sonar.projectKey>
+    <sonar.links.homepage>https://github.com/tizianotaglienti/bookkeeper</sonar.links.homepage>
+    <sonar.links.ci>https://travis-ci.com/tizianotaglienti/bookkeeper</sonar.links.ci>
+    <sonar.links.scm>https://github.com/tizianotaglienti/bookkeeper</sonar.links.scm>
+    <sonar.links.issue>https://github.com/tizianotaglienti/bookkeeper/issues</sonar.links.issue>
+    <aggregate.report.dir>tests/target/site/jacoco-reports/jacoco.xml</aggregate.report.dir>
   </properties>
 
   <!-- dependency definitions -->
@@ -662,6 +668,7 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
@@ -818,6 +825,16 @@
     </extensions>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>3.6.0.1398</version>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.4</version>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
@@ -1025,6 +1042,28 @@
     </plugins>
   </build>
   <profiles>
+    <profile>
+      <id>coverage</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <!-- profile used by jenkins CI -->
       <id>code-coverage</id>
