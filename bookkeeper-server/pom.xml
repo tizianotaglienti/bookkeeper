@@ -264,16 +264,17 @@
           <plugin>
             <groupId>org.pitest</groupId>
             <artifactId>pitest-maven</artifactId>
-            <version>1.5.2</version>
+            <version>1.6.9</version>
             <configuration>
               <targetClasses>
                 <param>org.apache.bookkeeper.bookie.FileInfo</param>
-                <param>org.apache.bookkeeper.util.ByteBufList</param>
+                <param>org.apache.bookkeeper.util.ByteBufList*</param>
               </targetClasses>
               <targetTests>
-                <param>org.apache.bookkeeper.bookie.TestFileInfo</param>
-                <param>org.apache.bookkeeper.util.TestByteBufList</param>
+                <param>org.apache.bookkeeper.bookie.FileInfoTest</param>
+                <param>org.apache.bookkeeper.util.ByteBufListTest</param>
               </targetTests>
+              <threads>3</threads>
               <avoidCallsTo>
                 <avoidCallsTo>java.util.logging</avoidCallsTo>
                 <avoidCallsTo>org.apache.log4j</avoidCallsTo>
@@ -283,7 +284,8 @@
             </configuration>
             <executions>
               <execution>
-                <id>mutation-coverage</id>
+                <id>pit-report</id>
+                <phase>test</phase>
                 <goals>
                   <goal>mutationCoverage</goal>
                 </goals>
