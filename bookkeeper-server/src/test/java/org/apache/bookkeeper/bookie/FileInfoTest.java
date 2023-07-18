@@ -329,7 +329,7 @@ public class FileInfoTest {
                 assertTrue(Files.exists(Paths.get("tmp" + "/" + this.temp.getName())));
             else
                 assertTrue(Files.exists(Paths.get("tmp" + "/" + this.dst.getName())));
-            
+
             assertEquals(result, resultNewFile);
         }
 
