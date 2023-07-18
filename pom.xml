@@ -206,7 +206,7 @@
     <sonar.links.scm>https://github.com/tizianotaglienti/bookkeeper</sonar.links.scm>
     <sonar.links.issue>https://github.com/tizianotaglienti/bookkeeper/issues</sonar.links.issue>
     <sonar.login>squ_cb620920035d0d5eeef3f465e52c031ed17e3d09</sonar.login>
-    <aggregate.report.dir>tests/target/site/jacoco-reports/jacoco.xml</aggregate.report.dir>
+    <aggregate.report.dir>tests/target/site/jacoco-aggregate/jacoco.xml</aggregate.report.dir>
   </properties>
 
   <!-- dependency definitions -->
