@@ -18,24 +18,22 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class FileInfoTest {
 
     private static File lf;
-    private byte[] masterKey; //valid, not valid,"",null
-    private int fileInfoVersion;// V1,V0
-    private ByteBuffer[] dataTest1;//null,valid,""
+    private byte[] masterKey;
+    private int fileInfoVersion;
+    private ByteBuffer[] dataTest1;
     private ByteBuffer[] dataTest2;
-    private long position;//<0,=0,>0
-    private Integer size;//<0,=0,>0
-    private Boolean bestEffort;//true,false
-    private File dst;//valid, not valid
-    private long sizeContent;//<0,=0,>0
+    private long position;
+    private Integer size;
+    private Boolean bestEffort;
+    private File dst;
+    private long sizeContent;
     private static String fileName = "writeFileInfo.log";
-    private static int lengthByteBuff;
     private ByteBuf lac;
     private static ByteBuffer b1;
     private File temp;
@@ -55,7 +53,7 @@ public class FileInfoTest {
     }
 
     @BeforeClass
-    public static void setUpEnvironment(){
+    public static void setUpEnvironment() {
         // Create the directories if do not exist
         if (!Files.exists(Paths.get("tmp"))) {
             File tmpDir = new File("tmp");
@@ -87,8 +85,9 @@ public class FileInfoTest {
     }
 
     @Parameterized.Parameters
-    public static Collection<TestInput> getTestParameters() throws IOException {
+    public static Collection<TestInput> getTestParameters() {
         Collection<TestInput> inputs = new ArrayList<>();
+
 
         byte[] test = "Test String".getBytes(StandardCharsets.UTF_8);
         b1 = ByteBuffer.wrap(test);
@@ -115,12 +114,8 @@ public class FileInfoTest {
         inputs.add(new TestInput(byB,"master".getBytes(StandardCharsets.UTF_8),FileInfo.V1 ,bb,bb,0L,400,false,null,0));
         inputs.add(new TestInput(byB,"master".getBytes(StandardCharsets.UTF_8),FileInfo.V1 ,bb,bb,0L,400,true,null,0));
         inputs.add(new TestInput(byB,"master".getBytes(StandardCharsets.UTF_8),FileInfo.V0 ,bb,bb,0L,55,false,new File("tmp"+"/"+ fileName),9223372036854775807L));
+        inputs.add(new TestInput(byB,"master".getBytes(StandardCharsets.UTF_8),-1,bb,bb,0L,55,true,null,10));
 
-        //inputs.add(new TestInput(byB,"master".getBytes(StandardCharsets.UTF_8),FileInfo.V0 ,,bb,0L,55,false,new File("tmp"+"/"+ fileName),9223372036854775807L));
-
-        //inputs.add(new TestInput(null,FileInfo.CURRENT_HEADER_VERSION,bb,bb,1L,20,false,temp,Long.MAX_VALUE));
-        //inputs.add(new TestInput("master".getBytes(StandardCharsets.UTF_8),3,bb,bb,0L,20,true,temp,Long.MAX_VALUE));
-        //inputs.add(new TestInput(null,FileInfo.CURRENT_HEADER_VERSION,bb,bb,1L,20,false,temp,Long.MAX_VALUE));
 
         return inputs;
 
@@ -167,9 +162,11 @@ public class FileInfoTest {
             this.sizeContent = sizeContent;
         }
 
+
         public ByteBuf getLac() {
             return lac;
         }
+
 
         public byte[] getMasterKey() {
             return masterKey;
@@ -228,6 +225,23 @@ public class FileInfoTest {
 
         }
 
+        ByteBuf byB = Unpooled.buffer(0);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+        byB.writeLong(1L);
+
+
+        if(byB.capacity() != 0) {
+            Logger.getRootLogger().setLevel(Level.INFO);
+            fi.setExplicitLac(byB);
+            assertEquals(byB.resetReaderIndex(), fi.getExplicitLac());
+        }
+
 
         fi.close(true);
     }
@@ -238,8 +252,8 @@ public class FileInfoTest {
         FileInfo fi = new FileInfo(lf,this.masterKey,this.fileInfoVersion);
 
         long numBytesWritten = fi.write(this.dataTest1,this.position);
-
         b1.position(0);
+
 
         assertTrue(numBytesWritten > 0L);
         assertTrue(fi.size() > 0 );
@@ -249,17 +263,17 @@ public class FileInfoTest {
         ByteBuffer bBuff = ByteBuffer.allocate(this.size);
 
         if(this.size > 55 && this.bestEffort.equals(false)){
-            //exceptionRule.expect(ShortReadException.class);
-
             try {
                 fi.read(bBuff, this.position, this.bestEffort);
                 Assert.fail("Expected an ShortReadException to be thrown");
             }catch(ShortReadException e) {}
         }else {
+
             int numBytesRead = fi.read(bBuff, this.position, this.bestEffort);
 
             assertTrue(numBytesRead > 0);
             assertEquals(numBytesWritten, bBuff.capacity() - bBuff.remaining());
+
         }
 
         fi.close(true);
@@ -270,7 +284,7 @@ public class FileInfoTest {
 
         String value = null;
 
-        try (FileInputStream fis = new FileInputStream(pathFile)) { //"tmp"+"/"+fileName
+        try (FileInputStream fis = new FileInputStream(pathFile)) {
 
             int i;
 
@@ -280,9 +294,8 @@ public class FileInfoTest {
                 i = fis.read(readStr);
 
                 value = new String(readStr, StandardCharsets.UTF_8);
-
-                    if(value.equals(new String(new byte[numBytes],StandardCharsets.UTF_8)))
-                        i = 0;
+                if(value.equals(new String(new byte[numBytes],StandardCharsets.UTF_8)))
+                    i = 0;
 
             } while (i != 0);
 
@@ -302,7 +315,6 @@ public class FileInfoTest {
         FileInfo fi = new FileInfo(lf,this.masterKey,this.fileInfoVersion);
 
         long numBytesWritten = fi.write(this.dataTest2,this.position);
-
         b1.position(0);
 
         assertTrue(numBytesWritten > 0);
@@ -323,7 +335,7 @@ public class FileInfoTest {
 
         if(this.dst != null && !this.dst.getName().equals(lf.getName())) {
             //check deleted file
-            assertTrue(!Files.exists(Paths.get("tmp" + "/" + fileName)));
+            assertFalse(Files.exists(Paths.get("tmp" + "/" + fileName)));
             //check if new file exists
             if(this.dst == null)
                 assertTrue(Files.exists(Paths.get("tmp" + "/" + this.temp.getName())));
