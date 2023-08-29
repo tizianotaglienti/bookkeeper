@@ -912,12 +912,12 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
-          <argLine>${argLine} -Xmx2G
-            -Djava.net.preferIPv4Stack=true
-            -Dio.netty.leakDetection.level=paranoid
-            <!-- -javaagent:${basedir}/bookkeeper-server/src/test/resources/ba-dua-agent-rt-0.8.0.jar
-            -Xbootclasspath/p:${basedir}/bookkeeper-server/src/test/resources/ba-dua-agent-rt-0.8.0.jar -->
-          </argLine>
+<!--          <argLine>${argLine} -Xmx2G-->
+<!--            -Djava.net.preferIPv4Stack=true-->
+<!--            -Dio.netty.leakDetection.level=paranoid-->
+<!--            &lt;!&ndash; -javaagent:${basedir}/bookkeeper-server/src/test/resources/ba-dua-agent-rt-0.8.0.jar-->
+<!--            -Xbootclasspath/p:${basedir}/bookkeeper-server/src/test/resources/ba-dua-agent-rt-0.8.0.jar &ndash;&gt;-->
+<!--          </argLine>-->
           <redirectTestOutputToFile>${redirectTestOutputToFile}</redirectTestOutputToFile>
           <forkCount>${forkCount.variable}</forkCount>
           <reuseForks>false</reuseForks>
@@ -1078,17 +1078,18 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <version>${maven-surefire-plugin.version}</version>
             <configuration>
-              <!-- @{argLine} is a variable injected by JaCoCo-->
+              <!-- @{argLine} is a variable injected by JaCoCo
               <argLine>@{argLine}
                 -Xmx2G
                 -Djava.net.preferIPv4Stack=true
-              </argLine>
+              </argLine-->
               <redirectTestOutputToFile>${redirectTestOutputToFile}</redirectTestOutputToFile>
               <forkCount>${forkCount.variable}</forkCount>
               <reuseForks>false</reuseForks>
               <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
               <!-- we want build to complete even in case of failures -->
               <testFailureIgnore>true</testFailureIgnore>
+              <rerunFailingTestsCount>${testRetryCount}</rerunFailingTestsCount>
             </configuration>
           </plugin>
         </plugins>

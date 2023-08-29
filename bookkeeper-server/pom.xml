@@ -320,12 +320,12 @@
                 </goals>
               </execution>
             </executions>
-            <configuration>
-              <argLine>
-                -javaagent:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar
-                -Xbootclasspath/p:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar
-              </argLine>
-            </configuration>
+<!--            <configuration>-->
+<!--              <argLine>-->
+<!--                -javaagent:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar-->
+<!--                -Xbootclasspath/p:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar-->
+<!--              </argLine>-->
+<!--            </configuration>-->
           </plugin>
         </plugins>
       </build>
