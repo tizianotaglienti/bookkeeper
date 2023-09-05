@@ -21,23 +21,24 @@
 
 package org.apache.bookkeeper.bookie;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.bookkeeper.bookie.LastAddConfirmedUpdateNotification.WATCHER_RECYCLER;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.apache.bookkeeper.common.util.Watchable;
+import org.apache.bookkeeper.common.util.Watcher;
+import org.apache.bookkeeper.proto.checksum.DigestManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import org.apache.bookkeeper.common.util.Watchable;
-import org.apache.bookkeeper.common.util.Watcher;
-import org.apache.bookkeeper.proto.checksum.DigestManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.bookkeeper.bookie.LastAddConfirmedUpdateNotification.WATCHER_RECYCLER;
 
 /**
  * This is the file handle for a ledger's index file that maps entry ids to location.
@@ -402,12 +403,9 @@ class FileInfo extends Watchable<LastAddConfirmedUpdateNotification> {
      * Otherwise, it would throw {@link org.apache.bookkeeper.bookie.ShortReadException}
      * if it reaches EOF.
      *
-     * @param bb
-     *          byte buffer of data
-     * @param start
-     *          start position to read data
-     * @param bestEffort
-     *          flag indicates if it is a best-effort read
+     * @param bb         byte buffer of data
+     * @param start      start position to read data
+     * @param bestEffort flag indicates if it is a best-effort read
      * @return number of bytes read
      * @throws IOException
      */
@@ -445,9 +443,8 @@ class FileInfo extends Watchable<LastAddConfirmedUpdateNotification> {
      * cause metadata to be lost). Setting force=false helps avoid expensive file create during shutdown with many
      * dirty ledgers, and is safe because ledger metadata will be recovered before being accessed again.
      *
-     * @param force
-     *          if set to true, the index is forced to create before closed,
-     *          if set to false, the index is not forced to create.
+     * @param force if set to true, the index is forced to create before closed,
+     *              if set to false, the index is not forced to create.
      */
     public void close(boolean force) throws IOException {
         boolean changed = false;

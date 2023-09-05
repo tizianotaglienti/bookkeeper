@@ -227,6 +227,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
+          <reuseForks>false</reuseForks>
+          <forkCount>1</forkCount>
           <testFailureIgnore>true</testFailureIgnore>
         </configuration>
       </plugin>
@@ -313,6 +315,8 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
+            <version>${maven-surefire-plugin.version}</version>
+
             <executions>
               <execution>
                 <goals>
@@ -320,12 +324,14 @@
                 </goals>
               </execution>
             </executions>
-<!--            <configuration>-->
-<!--              <argLine>-->
-<!--                -javaagent:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar-->
-<!--                -Xbootclasspath/p:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-0.8.0.jar-->
-<!--              </argLine>-->
-<!--            </configuration>-->
+            <configuration>
+                <reuseForks>false</reuseForks>
+                <forkCount>1</forkCount>
+              <argLine>
+                -javaagent:"C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar"
+                -Xbootclasspath/p:"C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar"
+              </argLine>
+            </configuration>
           </plugin>
         </plugins>
       </build>
