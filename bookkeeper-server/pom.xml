@@ -269,11 +269,14 @@
             <version>1.14.2</version>
             <configuration>
               <targetClasses>
-                <param>org.apache.bookkeeper.bookie.FileInfo</param>
+                <param>org.apache.bookkeeper.bookie.storage.ldb.ReadCache</param>
+                <param>org.apache.bookkeeper.bookie.storage.ldb.WriteCache</param>
                 <param>org.apache.bookkeeper.util.ByteBufList*</param>
               </targetClasses>
               <targetTests>
-                <param>org.apache.bookkeeper.bookie.FileInfoTest</param>
+                <param>org.apache.bookkeeper.bookie.storage.ldb.ReadCacheTest</param>
+                <param>org.apache.bookkeeper.bookie.storage.ldb.WriteCacheGetTest</param>
+                <param>org.apache.bookkeeper.bookie.storage.ldb.WriteCachePutTest</param>
                 <param>org.apache.bookkeeper.util.ByteBufListTest</param>
               </targetTests>
               <threads>3</threads>
@@ -328,8 +331,8 @@
                 <reuseForks>false</reuseForks>
                 <forkCount>1</forkCount>
               <argLine>
-                -javaagent:"C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar"
-                -Xbootclasspath/p:"C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar"
+                -javaagent:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar
+                -Xbootclasspath/p:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar
               </argLine>
             </configuration>
           </plugin>
