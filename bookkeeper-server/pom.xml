@@ -225,12 +225,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven-surefire-plugin.version}</version>
-        <configuration>
-          <reuseForks>false</reuseForks>
-          <forkCount>1</forkCount>
-          <testFailureIgnore>true</testFailureIgnore>
-        </configuration>
+<!--        <version>${maven-surefire-plugin.version}</version>-->
+<!--        <configuration>-->
+<!--          <reuseForks>false</reuseForks>-->
+<!--          <forkCount>1</forkCount>-->
+<!--          <testFailureIgnore>true</testFailureIgnore>-->
+<!--        </configuration>-->
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -300,6 +300,215 @@
         </plugins>
       </build>
     </profile>
+
+    <!-- test profiles -->
+<!--    <profile>-->
+<!--      <id>data-flow-test</id>-->
+<!--      <build>-->
+<!--        <plugins>-->
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-surefire-plugin</artifactId>-->
+<!--            <version>${maven-surefire-plugin.version}</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>test</goal>-->
+<!--                </goals>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--            <configuration>-->
+<!--              <useSystemClassLoader>false</useSystemClassLoader>-->
+<!--              <testFailureIgnore>true</testFailureIgnore>-->
+<!--              <reuseForks>false</reuseForks>-->
+<!--              <forkCount>1</forkCount>-->
+<!--              <argLine>-->
+<!--                -Xmx1024m-->
+<!--                -XX:MaxPermSize=256m-->
+<!--                -javaagent:C:\Users\tagli\Desktop\temp\bookkeeper\ba-dua\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar-->
+<!--                -Xbootclasspath/p:C:\Users\tagli\Desktop\temp\bookkeeper\ba-dua\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar-->
+<!--              </argLine>-->
+<!--            </configuration>-->
+<!--          </plugin>-->
+<!--        </plugins>-->
+<!--      </build>-->
+<!--    </profile>-->
+
+    <!-- Ba-Dua Profile -->
+<!--    <profile>-->
+<!--      <id>badua</id>-->
+<!--      <activation>-->
+<!--        <activeByDefault>false</activeByDefault>-->
+<!--      </activation>-->
+<!--      <properties>-->
+<!--        &lt;!&ndash; Use a stable version instead of SNAPSHOT one &ndash;&gt;-->
+<!--        <ba-dua.version>0.6.0</ba-dua.version>-->
+<!--        <argLine>-javaagent:target/dependency/ba-dua-agent-rt-${ba-dua.version}-all.jar-->
+<!--          -Doutput.file=target/badua.ser-->
+<!--        </argLine>-->
+<!--      </properties>-->
+<!--      &lt;!&ndash; Needed to generate the report &ndash;&gt;-->
+<!--      <dependencies>-->
+<!--        <dependency>-->
+<!--          <groupId>br.usp.each.saeg</groupId>-->
+<!--          <artifactId>ba-dua-cli</artifactId>-->
+<!--          <version>${ba-dua.version}</version>-->
+<!--        </dependency>-->
+<!--      </dependencies>-->
+<!--      <build>-->
+<!--        <plugins>-->
+<!--          &lt;!&ndash; Copy ba-dua-agent-rt from .m2 directory to target/dependency &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-dependency-plugin</artifactId>-->
+<!--            <version>2.10</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>copy</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <artifactItems>-->
+<!--                    <artifactItem>-->
+<!--                      <groupId>br.usp.each.saeg</groupId>-->
+<!--                      <artifactId>ba-dua-agent-rt</artifactId>-->
+<!--                      <classifier>all</classifier>-->
+<!--                      <version>${ba-dua.version}</version>-->
+<!--                    </artifactItem>-->
+<!--                    <artifactItem>-->
+<!--                      <groupId>br.usp.each.saeg</groupId>-->
+<!--                      <artifactId>ba-dua-cli</artifactId>-->
+<!--                      <classifier>all</classifier>-->
+<!--                      <version>${ba-dua.version}</version>-->
+<!--                    </artifactItem>-->
+<!--                  </artifactItems>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+
+<!--          &lt;!&ndash; build .xml report's file &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>org.codehaus.mojo</groupId>-->
+<!--            <artifactId>exec-maven-plugin</artifactId>-->
+<!--            <version>1.5.0</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>exec</goal>-->
+<!--                </goals>-->
+<!--                <phase>verify</phase>-->
+<!--                <configuration>-->
+<!--                  <executable>java</executable>-->
+<!--                  <arguments>-->
+<!--                    <argument>-jar</argument>-->
+<!--                    <argument>-->
+<!--                      ${basedir}/../ba-dua/ba-dua-cli-0.6.0-all.jar-->
+<!--                    </argument>-->
+<!--                    <argument>report</argument>-->
+<!--                    <argument>-input</argument>-->
+<!--                    <argument>target/badua.ser</argument>-->
+<!--                    <argument>-classes</argument>-->
+<!--                    <argument>target/classes</argument>-->
+<!--                    <argument>-show-classes</argument>-->
+<!--                    <argument>-show-methods</argument>-->
+<!--                    <argument>-xml</argument>-->
+<!--                    <argument>target/badua.xml</argument>-->
+<!--                  </arguments>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+<!--        </plugins>-->
+<!--      </build>-->
+<!--    </profile>-->
+
+    <profile>
+      <id>badua-coverage-offline</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <ba-dua.version>0.6.0</ba-dua.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>br.usp.each.saeg</groupId>
+          <artifactId>ba-dua-cli</artifactId>
+          <classifier>all</classifier>
+          <version>0.6.0</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <version>${maven-surefire-plugin.version}</version>
+              <configuration>
+                <argLine>
+                  -javaagent:${project.basedir}/../ba-dua/ba-dua-agent-rt-0.6.0-all.jar
+<!--                  -Xbootclasspath/p:${project.basedir}/../ba-dua/ba-dua-agent-rt-0.6.0-all.jar-->
+                  -Doutput.file=target/badua.ser
+                </argLine>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>copy</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>br.usp.each.saeg</groupId>
+                      <artifactId>ba-dua-agent-rt</artifactId>
+                      <classifier>all</classifier>
+                      <version>0.6.0</version>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.5.0</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+                <phase>verify</phase>
+                <configuration>
+                  <mainClass>br.usp.each.saeg.badua.cli.Report</mainClass>
+                  <arguments>
+                    <argument>-input</argument>
+                    <argument>${project.build.directory}/badua.ser</argument>
+                    <argument>-classes</argument>
+                    <argument>${project.build.outputDirectory}</argument>
+                    <argument>-show-classes</argument>
+                    <argument>-show-methods</argument>
+                    <argument>-xml</argument>
+                    <argument>${project.build.directory}/badua.xml</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <profile>
       <id>vertx-http-server</id>
       <dependencies>
@@ -310,35 +519,155 @@
         </dependency>
       </dependencies>
     </profile>
-    <!-- test profiles -->
-    <profile>
-      <id>data-flow-test</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven-surefire-plugin.version}</version>
 
-            <executions>
-              <execution>
-                <goals>
-                  <goal>test</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-                <reuseForks>false</reuseForks>
-                <forkCount>1</forkCount>
-              <argLine>
-                -javaagent:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar
-                -Xbootclasspath/p:C:\Users\tagli\Downloads\jar_files(3)\ba-dua-agent-rt-0.4.1-SNAPSHOT-all.jar
-              </argLine>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
+<!--    <profile>-->
+<!--      <id>badua</id>-->
+<!--      <activation>-->
+<!--        <activeByDefault>false</activeByDefault>-->
+<!--      </activation>-->
+<!--      <properties>-->
+<!--        <ba-dua.version>0.4.0</ba-dua.version>-->
+<!--        <argLine>-javaagent:target/dependency/ba-dua-agent-rt-${ba-dua.version}-all.jar -Doutput.file=${project.build.directory}/badua.ser</argLine>-->
+<!--      </properties>-->
+<!--      <dependencies>-->
+<!--        <dependency>-->
+<!--          <groupId>br.usp.each.saeg</groupId>-->
+<!--          <artifactId>ba-dua-cli</artifactId>-->
+<!--          <version>${ba-dua.version}</version>-->
+<!--        </dependency>-->
+<!--      </dependencies>-->
+<!--      <build>-->
+<!--        <plugins>-->
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-dependency-plugin</artifactId>-->
+<!--            <version>2.10</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>copy</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <artifactItems>-->
+<!--                    <artifactItem>-->
+<!--                      <groupId>br.usp.each.saeg</groupId>-->
+<!--                      <artifactId>ba-dua-agent-rt</artifactId>-->
+<!--                      <classifier>all</classifier>-->
+<!--                      <version>${ba-dua.version}</version>-->
+<!--                    </artifactItem>-->
+<!--                  </artifactItems>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+<!--          <plugin>-->
+<!--            <groupId>org.codehaus.mojo</groupId>-->
+<!--            <artifactId>exec-maven-plugin</artifactId>-->
+<!--            <version>1.5.0</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>java</goal>-->
+<!--                </goals>-->
+<!--                <phase>verify</phase>-->
+<!--                <configuration>-->
+<!--                  <mainClass>br.usp.each.saeg.badua.cli.Report</mainClass>-->
+<!--                  <arguments>-->
+<!--                    <argument>-input</argument>-->
+<!--                    <argument>${project.build.directory}/badua.ser</argument>-->
+<!--                    <argument>-classes</argument>-->
+<!--                    <argument>${project.build.outputDirectory}</argument>-->
+<!--                    <argument>-show-classes</argument>-->
+<!--                    <argument>-show-methods</argument>-->
+<!--                    <argument>-xml</argument>-->
+<!--                    <argument>${project.build.directory}/badua.xml</argument>-->
+<!--                  </arguments>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+<!--        </plugins>-->
+<!--      </build>-->
+<!--    </profile>-->
+
+<!--    <profile>-->
+<!--      <id>badua</id>-->
+<!--      <activation>-->
+<!--        <activeByDefault>false</activeByDefault>-->
+<!--      </activation>-->
+<!--      <properties>-->
+<!--        &lt;!&ndash; Use a stable version instead of SNAPSHOT one &ndash;&gt;-->
+<!--        <ba-dua.version>0.6.0</ba-dua.version>-->
+<!--        <argLine>-javaagent:target/dependency/ba-dua-agent-rt-${ba-dua.version}-all.jar-->
+<!--          -Doutput.file=target/badua.ser-->
+<!--        </argLine>-->
+<!--      </properties>-->
+<!--      &lt;!&ndash; Needed for generate the report &ndash;&gt;-->
+<!--      <dependencies>-->
+<!--        <dependency>-->
+<!--          <groupId>br.usp.each.saeg</groupId>-->
+<!--          <artifactId>ba-dua-cli</artifactId>-->
+<!--          <version>0.6.0</version>-->
+<!--        </dependency>-->
+<!--      </dependencies>-->
+<!--      <build>-->
+<!--        <plugins>-->
+<!--          &lt;!&ndash; Copy ba-dua-agent-rt from .m2 directory to target/dependency &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>org.apache.maven.plugins</groupId>-->
+<!--            <artifactId>maven-dependency-plugin</artifactId>-->
+<!--            <version>2.10</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>copy</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <artifactItems>-->
+<!--                    <artifactItem>-->
+<!--                      <groupId>br.usp.each.saeg</groupId>-->
+<!--                      <artifactId>ba-dua-agent-rt</artifactId>-->
+<!--                      <classifier>all</classifier>-->
+<!--                      <version>${ba-dua.version}</version>-->
+<!--                    </artifactItem>-->
+<!--                  </artifactItems>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+
+<!--          &lt;!&ndash; Generate report in xml format &ndash;&gt;-->
+<!--          <plugin>-->
+<!--            <groupId>org.codehaus.mojo</groupId>-->
+<!--            <artifactId>exec-maven-plugin</artifactId>-->
+<!--            <version>1.5.0</version>-->
+<!--            <executions>-->
+<!--              <execution>-->
+<!--                <goals>-->
+<!--                  <goal>java</goal>-->
+<!--                </goals>-->
+<!--                <phase>verify</phase>-->
+<!--                <configuration>-->
+<!--                  <mainClass>br.usp.each.saeg.badua.cli.Report</mainClass>-->
+<!--                  <arguments>-->
+<!--                    <argument>-input</argument>-->
+<!--                    <argument>${project.build.directory}/badua.ser</argument>-->
+<!--                    <argument>-classes</argument>-->
+<!--                    <argument>${project.build.outputDirectory}</argument>-->
+<!--                    <argument>-show-classes</argument>-->
+<!--                    <argument>-show-methods</argument>-->
+<!--                    <argument>-xml</argument>-->
+<!--                    <argument>${project.build.directory}/badua.xml</argument>-->
+<!--                  </arguments>-->
+<!--                </configuration>-->
+<!--              </execution>-->
+<!--            </executions>-->
+<!--          </plugin>-->
+<!--        </plugins>-->
+<!--      </build>-->
+<!--    </profile>-->
+
+
   </profiles>
   <properties>
     <sonar.coverage.jacoco.xmlReportPaths>${basedir}/../${aggregate.report.dir}</sonar.coverage.jacoco.xmlReportPaths>
