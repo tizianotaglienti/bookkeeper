@@ -22,7 +22,7 @@ public class WriteCachePutTest {
     private boolean notAvailableSegment;
     private boolean expectedResult;
 
-    public WriteCachePutTest(boolean expectedResult, long ledgerId, long entryId,ByteBuf entry, boolean notAvailableSegment) {
+    public WriteCachePutTest(boolean expectedResult, long ledgerId, long entryId, ByteBuf entry, boolean notAvailableSegment) {
         this.expectedResult = expectedResult;
         this.ledgerId = ledgerId;
         this.entryId = entryId;
@@ -33,11 +33,17 @@ public class WriteCachePutTest {
     @Parameterized.Parameters
     public static Collection<?> getParameter() {
         return Arrays.asList(new Object[][] {
-                {false, 0, -1, null, false}, // NullPointerException
-                {false, -1, 1, UnpooledByteBufAllocator.DEFAULT.buffer(1024), false},
+
+                {false, -1, 1, UnpooledByteBufAllocator.DEFAULT.buffer(1024), true},
                 {true, 0, 0,  UnpooledByteBufAllocator.DEFAULT.buffer(1024), false},
-                {false, 0, 0 , UnpooledByteBufAllocator.DEFAULT.buffer(11 * 1024), false} ,  // buffer oversize
+                {false, 1, -1, UnpooledByteBufAllocator.DEFAULT.buffer(11*1024), false},
+
+                {false, 0, -1, null, false}, // NullPointerException
                 {false, 0, 0, UnpooledByteBufAllocator.DEFAULT.buffer(2 * 1024 + 2), true},
+                {true, 1, 1, UnpooledByteBufAllocator.DEFAULT.buffer(10 * 1024 - 1), false},
+                {false, -1, 0, UnpooledByteBufAllocator.DEFAULT.buffer(11 * 1024), false}
+
+
         });
     }
 

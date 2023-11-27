@@ -49,22 +49,69 @@ public class ByteBufListTest {
         this.encoder = ti.getEncoder();
     }
 
+
     @Parameterized.Parameters
     public static Collection<TestInput> getTestParameters() {
         Collection<TestInput> inputs = new ArrayList<>();
 
+/*
+        // Caso 1: buf è una stringa di test (non null), stringhe con lunghezza > 0
+        inputs.add(new TestInput("testString", "test", "part", "pre", 11, ByteBufList.ENCODER));
+// Caso 1: buf è una stringa di test (non null), stringPart1 contiene "test" e stringPart2 è null
+        inputs.add(new TestInput("testString", "test", null, "pre", 11, ByteBufList.ENCODER));
+
+        // Caso 2: buf è un oggetto ByteBufList (non null), stringhe con lunghezza > 0
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())), "test", "part", "pre", 1, ByteBufList.ENCODER_WITH_SIZE));
+// Caso 2: buf è un oggetto ByteBufList (non null), stringPart1 è null e stringPart2 contiene "part"
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())), null, "part", "pre", 1, ByteBufList.ENCODER_WITH_SIZE));
+
+        // Caso 3: buf è un oggetto ByteBufList (non null), stringhe con lunghezza > 0, numBytes > 0
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testStringPart1".getBytes()), Unpooled.wrappedBuffer("testStringPart2".getBytes())), "test", "part", "pre", 1, ByteBufList.ENCODER));
+// Caso 3: buf è un oggetto ByteBufList (non null), stringPart1 è null e stringPart2 è null
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testStringPart1".getBytes()), Unpooled.wrappedBuffer("testStringPart2".getBytes())), null, null, "pre", 1, ByteBufList.ENCODER));
+
+        // Caso 4: buf è null, stringhe con lunghezza > 0, numBytes > 0
+        inputs.add(new TestInput(null, "test", "part", "pre", 1, ByteBufList.ENCODER));
+// Caso 4: buf è null, stringPart1 è null e stringPart2 è "test"
+        inputs.add(new TestInput(null, null, "test", "pre", 1, ByteBufList.ENCODER));
+
+        // Caso 5: buf è una stringa di test (non null), stringhe con lunghezza = 0, numBytes > 0
+        inputs.add(new TestInput("emptyString", "", "", "", 5, ByteBufList.ENCODER));
+// Caso 5: buf è una stringa di test (non null), stringPart1 è null e stringPart2 è "part"
+        inputs.add(new TestInput("emptyString", null, "part", "pre", 5, ByteBufList.ENCODER));
+
+        // Caso 6: buf è un oggetto ByteBufList (non null), stringhe con lunghezza > 0, numBytes = 0
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())), "test", "part", "pre", 0, ByteBufList.ENCODER_WITH_SIZE));
+// Caso 6: buf è un oggetto ByteBufList (non null), stringPart1 contiene "test" e stringPart2 è null, numBytes è 0
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())), "test", null, "pre", 0, ByteBufList.ENCODER_WITH_SIZE));
+*/
 
 
         inputs.add(new TestInput("testString","test","part","pre",11, ByteBufList.ENCODER));
-        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",1, ByteBufList.ENCODER_WITH_SIZE));
+        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",1, ByteBufList.ENCODER));
         inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",0, ByteBufList.ENCODER));
         inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testStringPart1".getBytes()),Unpooled.wrappedBuffer("testStringPart2".getBytes())),"","","",0, ByteBufList.ENCODER));
-        //inputs.add(new TestInput(ByteBufList.get(null),"","","",0, ByteBufList.ENCODER));
+
+//        inputs.add(new TestInput("testString","test","part","pre",11));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",1));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",0));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testStringPart1".getBytes()),Unpooled.wrappedBuffer("testStringPart2".getBytes())),"","","",0));
 
 
         return inputs;
-
     }
+
+//    @Parameterized.Parameters
+//    public static Collection<TestInput> getTestParameters() {
+//        Collection<TestInput> inputs = new ArrayList<>();
+//        inputs.add(new TestInput("testString","test","part","pre",11, ByteBufList.ENCODER));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",1, ByteBufList.ENCODER_WITH_SIZE));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testString".getBytes())),"","","",0, ByteBufList.ENCODER));
+//        inputs.add(new TestInput(ByteBufList.get(Unpooled.wrappedBuffer("testStringPart1".getBytes()),Unpooled.wrappedBuffer("testStringPart2".getBytes())),"","","",0, ByteBufList.ENCODER));
+//        //inputs.add(new TestInput(ByteBufList.get(null),"","","",0, ByteBufList.ENCODER));
+//        return inputs;
+//
+//    }
 
     @BeforeClass
     public static void setupEnvironment() throws IOException {
@@ -193,7 +240,7 @@ public class ByteBufListTest {
         private Integer numBytes;
         private Encoder encoder;
 
-        public TestInput(Object buf, String stringPart1, String stringPart2, String prefix, Integer numBytes,Encoder encoder) {
+        public TestInput(Object buf, String stringPart1, String stringPart2, String prefix, Integer numBytes, Encoder encoder) {
             this.buf = buf;
             this.stringPart1 = stringPart1;
             this.stringPart2 = stringPart2;

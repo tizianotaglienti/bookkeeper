@@ -41,7 +41,7 @@ public class ReadCacheTest {
     }
 
     @Before
-    public void setup() {
+    public void setup(){
         cache = new ReadCache(UnpooledByteBufAllocator.DEFAULT, 10 * 1024);
     }
 
